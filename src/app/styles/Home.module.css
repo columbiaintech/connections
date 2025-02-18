@@ -1,0 +1,17 @@
+.eventForm{
+    display: table;
+}
+
+form.eventForm{
+    align-items: left;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height:100%;
+    width:100%;
+
+}
+
+textarea.eventForm{
+    max-width: 100%;
+}
