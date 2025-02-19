@@ -1,11 +1,17 @@
 "use client";
-// TODO: handles csv upload / dropzone
+// csv dropzone - passes csv to CSVMapping component
+// TODO: add success/error messages after upload attempt
 
 import React, {useCallback, useState} from "react";
 import {useDropzone} from "react-dropzone";
 import CSVMapping from "@/components/CSVMapping";
 
-function CSVUpload(){
+type CSVUploadProps = {
+    dbColumns: string[];
+    onFileUpload: (file: File) => void;
+}
+
+function CSVUpload({ dbColumns }: CSVUploadProps) {
     const [file, setFile] = useState<File | null>(null);
 
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -25,7 +31,6 @@ function CSVUpload(){
     });
 
     return(
-
         <div className={`w-full max-w-2xl mx-auto font-[family-name:var(--font-geist-mono)]`}>
             <h3 className="text-lg font-medium mb-3">Upload CSV</h3>
             <div
@@ -41,7 +46,7 @@ function CSVUpload(){
                 <p className="mt-1 text-xs text-gray-500">Only CSV files are accepted</p>
             </div>
             {file &&(
-                <CSVMapping file={file}/>
+                <CSVMapping file={file} dbColumns={dbColumns}/>
             )}
         </div>
     )

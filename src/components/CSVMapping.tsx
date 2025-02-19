@@ -1,51 +1,69 @@
 "use client";
-// TODO: displays uploaded csv columns in table format, allows user to ignore, delete (and maybe technically create) columns
+// displays uploaded csv columns in table format,
+// ignores columns marked "--"
+// assuming no need to edit rows - maybe add edit button to modify csv before processing?
 
 import {parse} from 'papaparse';
 import React, {useState, useEffect, useCallback} from "react";
-import {fetchColumns} from "@/app/actions/updateData";
+import {stringSimilarity} from "string-similarity-js";
 
-type ColumnMap = {
-    csvColumn: string;
-    dbColumn: string|null;
+interface CSVMappingProps{
+    file: File;
+    dbColumns: string[];
 }
 
-export default function CSVMapping({file}: {file: File}) {
-    const [columns, setColumns] = useState<string[]>([]);
-    const [dbColumns, setDbColumns] = useState<string[]>([]);
+type ColumnMap = {
+    csvColumn: string | null;
+    dbColumn: string;
+    matchConfidence?: number;
+}
+
+export default function CSVMapping({ file, dbColumns, onMappingUpdate }: CSVMappingProps) {
+    const [csvColumns, setCsvColumns] = useState<string[]>([]);
     const [columnMapping, setColumnMapping] = useState<ColumnMap[]>([]);
 
     useEffect(() => {
-        const getColumns = async () => {
-            const columns = await fetchColumns();
-            setDbColumns(columns);
-        }
-        getColumns();
-    }, []);
-
-    useEffect(() => {
-        if (file) {
+        if (file && dbColumns.length>0) {
             parse(file, {
                 header: true,
+                skipEmptyLines: true,
                 preview: 1,
                 complete: (results) => {
                     if (results.data && results.data.length > 0) {
-                        const csvColumns = results.meta.fields || [];
-                        setColumns(csvColumns);
+                        const csvCols = results.meta.fields || [];
+                        setCsvColumns(csvCols);
 
-                        const mapping = csvColumns.map(csvCol => {
-                            const exactMatch = dbColumns.find(dbCol =>
-                                dbCol.toLowerCase() === csvCol.toLowerCase());
+                        const mapping = dbColumns.map(dbCol => {
+                            let bestMatch = null;
+                            let highestSimilarity = 0;
 
-                            if (!exactMatch) {
-                                const similarMatch = dbColumns.find(dbCol =>
-                                    dbCol.toLowerCase().includes(csvCol.toLowerCase()) ||
-                                    csvCol.toLowerCase().includes(dbCol.toLowerCase()));
+                            csvCols.forEach(csvCol=>{
+                                const similarity = stringSimilarity(
+                                    csvCol.toLowerCase().replace(/[^\w\s]/g, ''),
+                                    dbCol.toLowerCase().replace(/[^\w\s]/g, ''));
+                                if(similarity>highestSimilarity){
+                                    highestSimilarity = similarity;
+                                    bestMatch = csvCol;
+                                }
+                            });
 
-                                return {csvColumn: csvCol, dbColumn: similarMatch || null};
+                            if(highestSimilarity>0.8){
+                                return {
+                                    csvColumn: bestMatch,
+                                    dbColumn: dbCol,
+                                    matchConfidence: highestSimilarity
+
+                                };
                             }
+                            else if(highestSimilarity>0.5){
+                                return {
+                                    csvColumn: bestMatch,
+                                    dbColumn: dbCol,
+                                    matchConfidence: highestSimilarity
 
-                            return {csvColumn: csvCol, dbColumn: exactMatch};
+                                };
+                            }
+                            return {csvColumn: null, dbColumn: dbCol, matchConfidence: 0};
                         });
 
                         setColumnMapping(mapping);
@@ -53,37 +71,14 @@ export default function CSVMapping({file}: {file: File}) {
                 },
             });
         }
-    }, [file]);
+    }, [file, dbColumns]);
 
-
-    const handleColumnMappingChange = (csvColumn: string, dbColumn: string | null) => {
+    const handleColumnMappingChange = (dbColumn: string, csvColumn: string | null) => {
         setColumnMapping(prev =>
             prev.map(map =>
-                map.csvColumn === csvColumn ? {...map, dbColumn} : map
+                map.dbColumn === dbColumn ? {...map, csvColumn} : map
             )
         );
-    };
-
-    const handleProcessFile = async () => {
-        parse(file, {
-            header: true,
-            complete: async (results) => {
-                const {data} = results;
-
-                const mappedData = data.map((row: any) => {
-                    const newRow: any = {};
-
-                    columnMapping.forEach(map => {
-                        if (map.dbColumn && row[map.csvColumn]) {
-                            newRow[map.dbColumn] = row[map.csvColumn];
-                        }
-                    });
-
-                    return newRow;
-                });
-                await updateData(mappedData);
-            }
-        });
     };
 
     return (
@@ -94,17 +89,25 @@ export default function CSVMapping({file}: {file: File}) {
                     We've automatically mapped CSV columns to database fields. Please review and adjust if needed.
                 </p>
 
-                <div className="space-y-3">
-                    {columnMapping.map(({csvColumn, dbColumn}) => (
-                        <div key={csvColumn} className="flex items-center gap-4">
-                            <span className="w-1/2 p-1 text-sm">{csvColumn}</span>
+                <div className="flex items-center">
+                <span className="w-1/2 p-1 font-medium">Database Fields</span>
+                <span className="w-1/2 p-1 font-medium">CSV Fields</span>
+                </div>
+                <div className="space-y-3  ">
+                    {columnMapping.map(({csvColumn, dbColumn, matchConfidence}) => (
+                        <div key={dbColumn} className="flex items-center gap-4">
+                            <span className="w-1/2 p-1 text-sm">{dbColumn}</span>
                             <select
-                                value={dbColumn || ''}
-                                onChange={(e) => handleColumnMappingChange(csvColumn, e.target.value)}
-                                className="w-1/3 border rounded p-1 block w-full rounded-md border-gray-300 shadow-sm text-xs focus"
+                                value={csvColumn || ''}
+                                onChange={(e) => handleColumnMappingChange(dbColumn, e.target.value || null)}
+                                className={`w-1/2 border rounded p-1 block rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500 ${
+                                    matchConfidence && matchConfidence > 0.8 ? '' :
+                                        matchConfidence && matchConfidence > 0.5 ? 'bg-yellow-50 border-yellow-300' :
+                                            'bg-red-50 border-red-300'
+                                }`}
                             >
                                 <option value="">--</option>
-                                {dbColumns.map(col => (
+                                {csvColumns.map(col => (
                                     <option key={col} value={col}>
                                         {col}
                                     </option>
@@ -113,13 +116,6 @@ export default function CSVMapping({file}: {file: File}) {
                         </div>
                     ))}
                 </div>
-
-                <button
-                    onClick={handleProcessFile}
-                    className="mt-6 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {'Process CSV File'}
-                </button>
             </div>
         </div>
     );
