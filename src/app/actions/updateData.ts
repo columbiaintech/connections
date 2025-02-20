@@ -42,4 +42,5 @@ export async function fetchColumns() {
         console.error('Error fetching columns:', error);
         return [];
     }
+    try {
 }
