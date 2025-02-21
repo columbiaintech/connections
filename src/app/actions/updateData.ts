@@ -34,6 +34,13 @@ type Connection = {
     status: string;
 }
 
+type EventAttendee = {
+    event_id: string;
+    user_id: string;
+    wants_intro: boolean;
+    registered_status: string;
+}
+
 export async function fetchColumns() {
     const supabase = await createClient()
     try {
@@ -91,7 +98,6 @@ export async function createEvent({ eventName, eventDate, mappedData }) {
                 ...user,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
-                wants_intro: user.wants_intro || false,
             }));
 
         if (newUsers.length > 0) {
@@ -107,14 +113,72 @@ export async function createEvent({ eventName, eventDate, mappedData }) {
 
         const processedUsers = [...existingUsers, ...newUsers];
 
+        const eventAttendeeRecords = mappedData.map(user => ({
+            event_id: eventId,
+            user_id: existingUsersMap.get(user.email),
+            wants_intro: user.wants_intro || false,
+            registered_status: null,
+        }));
+
+        const { data: attendeeData, error: attendeeError } = await supabase
+            .from('event_attendees')
+            .insert(eventAttendeeRecords);
+        if (attendeeError) throw attendeeError;
+
         return {
             event: eventData,
+            event_attendees: attendeeData,
             users: processedUsers,
-            message: 'Successfully created event and users'
+            message: 'Successfully created event & added users to the database.'
         };
 
     } catch (error) {
         console.error('Error in updateEvent:', error);
         throw error;
+    }
+}
+
+export async function fetchEventDetails(eventId: string): Promise<Event | null> {
+    const supabase = await createClient();
+    try {
+        const { data, error } = await supabase
+            .from('events')
+            .select('*')
+            .eq('event_id', eventId)
+            .single();
+
+        if (error) {
+            throw error;
+        }
+
+        return data;
+
+    } catch (error) {
+        console.error('Error fetching events:', error);
+        return null;
+    }
+}
+
+export async function fetchEventAttendees(eventId: string) {
+    const supabase = await createClient();
+    try {
+        const { data, error } = await supabase
+            .from('event_attendees')
+            .select(`
+                *,
+                users (
+*                )
+            `)
+            .eq('event_id', eventId);
+
+        if (error) {
+            throw error;
+        }
+
+        return data;
+
+    } catch (error) {
+        console.error('Error fetching attendees:', error);
+        return [];
     }
 }
