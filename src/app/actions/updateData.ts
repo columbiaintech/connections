@@ -4,47 +4,48 @@ import { v4 as uuidv4 } from 'uuid';
 // TODO: initialize supabase client, create functions to update event, users, connections data
 
 type Event = {
-    eventId: string;
-    eventName: string;
-    eventDate: Date;
-    createdAt: Date;
+    event_id: string;
+    event_name: string;
+    event_date: Date;
+    created_at: Date;
 };
 
 type User = {
-    id: string;
+    user_id: string;
     name: string;
-    firstName: string;
-    lastName: string;
+    first_name: string;
+    last_name: string;
     email: string;
-    wantsIntroduction: boolean;
-    createdAt: Date;
-    updatedAt: Date;
+    wants_intro: boolean;
+    created_at: Date;
+    updated_at: Date;
     school: string;
-    classYear: number;
-    jobTitle: string;
-    companyName: string;
+    class_year: number;
+    job_title: string;
+    company_name: string;
 }
 
 type Connection = {
-    id: string;
-    user1Id: number;
-    user2Id: number;
-    eventId: string;
-    createdAt: Date;
+    connection_id: string;
+    user1_id: number;
+    user2_id: number;
+    event_id: string;
+    created_at: Date;
     status: string;
 }
 
 export async function fetchColumns() {
     const supabase = await createClient()
     try {
-        const { data: columns, error } = await supabase
-            .from('users')
-            .select('*')
-            .csv();
+        const { data, error } = await supabase.rpc('get_user_columns');
 
-        if (error) throw error;
+        if (error) {
+            throw error;
+        }
 
-        return columns.split('\n')[0].split(',');
+        return data.filter(column =>
+            !['created_at', 'updated_at', 'user_id'].includes(column)
+        );
 
     } catch (error) {
         console.error('Error fetching columns:', error);
@@ -52,49 +53,68 @@ export async function fetchColumns() {
     }
 }
 
-export async function updateEvent({eventName, eventDate, mappedData}: EventSubmitData) {
-    const supabase = await createClient()
+export async function createEvent({ eventName, eventDate, mappedData }) {
+    const supabase = await createClient();
     try {
         const eventId = uuidv4();
-        const eventRecord: EventRecord = {
-            id: eventId,
-            name: eventName,
-            date: eventDate,
+        const eventRecord = {
+            event_id: eventId,
+            event_name: eventName,
+            event_date: eventDate.toISOString(),
             created_at: new Date(),
         };
 
-        const { data: eventData} = await supabase
+        const { data: eventData, error: eventError } = await supabase
             .from('events')
             .insert(eventRecord)
             .select()
             .single();
 
-        const userRecords= mappedData.map(userData=>({
-            id: uuidv4(),
-            ...userData,
-        }));
-        const { data: userData, error: userError } = await supabase
+        if (eventError) throw eventError;
+
+        const emails = mappedData.map(user => user.email);
+        const { data: existingUsers, error: existingError } = await supabase
             .from('users')
-            .insert(userRecords)
-            .select();
+            .select('user_id, email')
+            .in('email', emails);
 
-        if (userError) {
-            await supabase
-                .from('events')
-                .delete()
-                .eq('id', eventId);
+        if (existingError) throw existingError;
 
-            throw new Error(`Failed to create users: ${userError.message}`);
+        const existingUsersMap = new Map(
+            existingUsers?.map(user => [user.email, user.user_id]) || []
+        );
+
+        const newUsers = mappedData
+            .filter(user => !existingUsersMap.has(user.email))
+            .map(user => ({
+                user_id: uuidv4(),
+                ...user,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                wants_intro: user.wants_intro || false,
+            }));
+
+        if (newUsers.length > 0) {
+            const { data: insertedUsers, error: insertError } = await supabase
+                .from('users')
+                .insert(newUsers)
+                .select();
+
+            if (insertError) throw insertError;
+
+            insertedUsers.forEach(user => existingUsersMap.set(user.email, user.user_id));
         }
+
+        const processedUsers = [...existingUsers, ...newUsers];
 
         return {
             event: eventData,
-            users: userData,
+            users: processedUsers,
             message: 'Successfully created event and users'
         };
 
     } catch (error) {
-        console.error('Error in updateData:', error);
+        console.error('Error in updateEvent:', error);
         throw error;
     }
 }

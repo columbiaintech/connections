@@ -5,7 +5,7 @@ import CSVUpload from "@/components/CSVUpload";
 import React from "react";
 import {useCallback, useState, FormEvent} from "react";
 import {parse} from 'papaparse';
-import {updateEvent} from "@/app/actions/updateData";
+import {createEvent} from "@/app/actions/updateData";
 import {ColumnMap} from "@/components/CSVMapping";
 import {useRouter} from "next/navigation";
 // TODO: get event details as textinput: event name, location, date, time
@@ -94,7 +94,7 @@ function EventForm({dbColumns}: EventFormProps) {
                 });
             };
             const mappedData = await processFile();
-            const result = await updateEvent({eventName, eventDate, mappedData});
+            const result = await createEvent({eventName, eventDate, mappedData});
             if (result?.event?.event_id){
                 router.push(`/events/${result.event.event_id}`);
             }else {
