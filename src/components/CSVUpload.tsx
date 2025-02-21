@@ -4,14 +4,15 @@
 
 import React, {useCallback, useState} from "react";
 import {useDropzone} from "react-dropzone";
-import CSVMapping from "@/components/CSVMapping";
+import CSVMapping, {ColumnMap} from "@/components/CSVMapping";
 
-type CSVUploadProps = {
+interface CSVUploadProps {
     dbColumns: string[];
     onFileUpload: (file: File) => void;
+    onMappingUpdate: (mapping: ColumnMap[]) => void;
 }
 
-function CSVUpload({ dbColumns }: CSVUploadProps) {
+function CSVUpload({ dbColumns, onFileUpload, onMappingUpdate }: CSVUploadProps) {
     const [file, setFile] = useState<File | null>(null);
 
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -19,7 +20,8 @@ function CSVUpload({ dbColumns }: CSVUploadProps) {
         if (!file) return;
 
         setFile(file);
-    }, []);
+        onFileUpload(file);
+    }, [onFileUpload]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
@@ -30,8 +32,8 @@ function CSVUpload({ dbColumns }: CSVUploadProps) {
         maxFiles: 1
     });
 
-    return(
-        <div className={`w-full max-w-2xl mx-auto font-[family-name:var(--font-geist-mono)]`}>
+    return (
+        <div className="w-full max-w-2xl mx-auto font-[family-name:var(--font-geist-mono)]">
             <h3 className="text-lg font-medium mb-3">Upload CSV</h3>
             <div
                 {...getRootProps()}
@@ -46,10 +48,9 @@ function CSVUpload({ dbColumns }: CSVUploadProps) {
                 <p className="mt-1 text-xs text-gray-500">Only CSV files are accepted</p>
             </div>
             {file &&(
-                <CSVMapping file={file} dbColumns={dbColumns}/>
+                <CSVMapping file={file} dbColumns={dbColumns} onMappingUpdate={onMappingUpdate}/>
             )}
         </div>
-    )
+    );
 }
-
 export default CSVUpload;
