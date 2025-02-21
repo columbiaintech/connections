@@ -4,18 +4,24 @@
 // assuming no need to edit rows - maybe add edit button to modify csv before processing?
 
 import {parse} from 'papaparse';
-import React, {useState, useEffect, useCallback} from "react";
+import React, {useState, useEffect} from "react";
 import {stringSimilarity} from "string-similarity-js";
 
 interface CSVMappingProps{
     file: File;
     dbColumns: string[];
+    onMappingUpdate: (mapping: ColumnMap[]) => void;
 }
 
-type ColumnMap = {
+export type ColumnMap = {
     csvColumn: string | null;
     dbColumn: string;
     matchConfidence?: number;
+}
+
+interface MatchResult{
+    bestMatch: string | null;
+    matchConfidence: number;
 }
 
 export default function CSVMapping({ file, dbColumns, onMappingUpdate }: CSVMappingProps) {
@@ -23,62 +29,67 @@ export default function CSVMapping({ file, dbColumns, onMappingUpdate }: CSVMapp
     const [columnMapping, setColumnMapping] = useState<ColumnMap[]>([]);
 
     useEffect(() => {
-        if (file && dbColumns.length>0) {
-            parse(file, {
-                header: true,
-                skipEmptyLines: true,
-                preview: 1,
-                complete: (results) => {
-                    if (results.data && results.data.length > 0) {
-                        const csvCols = results.meta.fields || [];
-                        setCsvColumns(csvCols);
+        if (!file || !dbColumns.length) return;
 
-                        const mapping = dbColumns.map(dbCol => {
-                            let bestMatch = null;
-                            let highestSimilarity = 0;
+        parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            preview: 1,
+            complete: (results) => {
+                if (results.data && results.data.length > 0) {
+                    const csvCols = results.meta.fields || [];
+                    setCsvColumns(csvCols);
 
-                            csvCols.forEach(csvCol=>{
-                                const similarity = stringSimilarity(
-                                    csvCol.toLowerCase().replace(/[^\w\s]/g, ''),
-                                    dbCol.toLowerCase().replace(/[^\w\s]/g, ''));
-                                if(similarity>highestSimilarity){
-                                    highestSimilarity = similarity;
-                                    bestMatch = csvCol;
-                                }
-                            });
+                    const mapping = dbColumns.map(dbCol => {
+                        const { bestMatch, matchConfidence } = findBestMatch(dbCol, csvCols);
 
-                            if(highestSimilarity>0.8){
-                                return {
-                                    csvColumn: bestMatch,
-                                    dbColumn: dbCol,
-                                    matchConfidence: highestSimilarity
-
-                                };
-                            }
-                            else if(highestSimilarity>0.5){
-                                return {
-                                    csvColumn: bestMatch,
-                                    dbColumn: dbCol,
-                                    matchConfidence: highestSimilarity
-
-                                };
-                            }
-                            return {csvColumn: null, dbColumn: dbCol, matchConfidence: 0};
+                        return {
+                            csvColumn: bestMatch,
+                            dbColumn: dbCol,
+                            matchConfidence:matchConfidence,
+                        };
                         });
 
                         setColumnMapping(mapping);
-                    }
+                    };
+
                 },
             });
-        }
     }, [file, dbColumns]);
 
-    const handleColumnMappingChange = (dbColumn: string, csvColumn: string | null) => {
-        setColumnMapping(prev =>
-            prev.map(map =>
-                map.dbColumn === dbColumn ? {...map, csvColumn} : map
-            )
+    useEffect(()=>{
+        if (columnMapping.length>0){
+            onMappingUpdate(columnMapping);
+        }
+    },[columnMapping, onMappingUpdate]);
+
+    const handleColumnMappingChange = (dbColumn: string, csvColumn: string|null) => {
+        const newMapping = columnMapping.map(map =>
+            map.dbColumn === dbColumn ? {...map, csvColumn} : map
         );
+        setColumnMapping(newMapping);
+        onMappingUpdate(newMapping);
+    };
+
+    const findBestMatch = (dbCol: string, csvCols: string[]): MatchResult => {
+        let bestMatch = null;
+        let highestSimilarity = 0;
+
+        csvCols.forEach(csvCol => {
+            const similarity = stringSimilarity(
+                csvCol.toLowerCase().replace(/[^\w\s]/g, ''),
+                dbCol.toLowerCase().replace(/[^\w\s]/g, '')
+            );
+            if (similarity > highestSimilarity) {
+                highestSimilarity = similarity;
+                bestMatch = csvCol;
+            }
+        });
+
+        return {
+            bestMatch: highestSimilarity > 0.5 ? bestMatch : null,
+            matchConfidence: highestSimilarity
+        };
     };
 
     return (
