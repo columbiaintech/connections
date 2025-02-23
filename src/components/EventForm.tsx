@@ -96,7 +96,8 @@ function EventForm({dbColumns}: EventFormProps) {
             const mappedData = await processFile();
             const result = await createEvent({eventName, eventDate, mappedData});
             if (result?.event?.event_id){
-                router.push(`/events/${result.event.event_id}`);
+                const eventId = result?.event?.event_id;
+                router.push(`/events/${eventId}`);
             }else {
                 throw new Error("Failed to create event. Please try again.");
             }
