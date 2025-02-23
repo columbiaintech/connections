@@ -60,6 +60,80 @@ export async function fetchColumns() {
     }
 }
 
+async function findExistingUsers(emails: string[]){
+    const supabase = await createClient();
+    try {
+        const {data: existingUsers, error} = await supabase
+            .from('users')
+            .select('user_id, email')
+            .in('email', emails);
+        if(error) throw error;
+        return new Map(existingUsers?.map(user=>[user.email, user.user_id])||[]);
+    } catch(error){
+        console.error('Error finding existing users:', error);
+        throw error;
+    }
+}
+
+async function createUsers(userData: any[]){
+    const supabase = await createClient();
+    try {
+        const newUsers = userData.map(user=>({
+            user_id: uuidv4(),
+            ...user,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }));
+        const {data: insertedUsers, error} = await supabase
+            .from('users')
+            .insert(newUsers)
+            .select();
+        if (error) throw error;
+        return insertedUsers;
+        }
+        catch(error){
+            console.error('Error creating users:', error);
+            throw error;
+        }
+}
+
+async function processUsers(userData: any[]){
+    const existingUsers = await findExistingUsers(userData.map(user=>user.email));
+    const newUsers = userData.filter(user=>!existingUsers.has(user.email));
+    const createdUsers = await createUsers(newUsers);
+
+    createdUsers.forEach(user=>existingUsers.set(user.email, user.user_id));
+
+    return{
+        userMap: existingUsers,
+        processedUsers: userData.map(user=>({
+            ...user,
+            user_id: existingUsers.get(user.email)
+        }))
+    };
+}
+
+async function createEventAttendees(eventId: string, attendees: any[]){
+    const supabase = await createClient();
+    try{
+        const eventAttendeeRecords = attendees.map(attendee => ({
+            event_id: eventId,
+            user_id: attendee.user_id,
+            wants_intro: attendee.wants_intro || false,
+            registered_status: attendee.registered_status || null,
+        }));
+
+        const { data, error } = await supabase
+            .from('event_attendees')
+            .insert(eventAttendeeRecords);
+        if (error) throw error;
+        return data;
+    } catch(error){
+        console.error('Error creating event attendees:', error);
+        throw error;
+    }
+}
+
 export async function createEvent({ eventName, eventDate, mappedData }) {
     const supabase = await createClient();
     try {
@@ -79,51 +153,8 @@ export async function createEvent({ eventName, eventDate, mappedData }) {
 
         if (eventError) throw eventError;
 
-        const emails = mappedData.map(user => user.email);
-        const { data: existingUsers, error: existingError } = await supabase
-            .from('users')
-            .select('user_id, email')
-            .in('email', emails);
-
-        if (existingError) throw existingError;
-
-        const existingUsersMap = new Map(
-            existingUsers?.map(user => [user.email, user.user_id]) || []
-        );
-
-        const newUsers = mappedData
-            .filter(user => !existingUsersMap.has(user.email))
-            .map(user => ({
-                user_id: uuidv4(),
-                ...user,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            }));
-
-        if (newUsers.length > 0) {
-            const { data: insertedUsers, error: insertError } = await supabase
-                .from('users')
-                .insert(newUsers)
-                .select();
-
-            if (insertError) throw insertError;
-
-            insertedUsers.forEach(user => existingUsersMap.set(user.email, user.user_id));
-        }
-
-        const processedUsers = [...existingUsers, ...newUsers];
-
-        const eventAttendeeRecords = mappedData.map(user => ({
-            event_id: eventId,
-            user_id: existingUsersMap.get(user.email),
-            wants_intro: user.wants_intro || false,
-            registered_status: null,
-        }));
-
-        const { data: attendeeData, error: attendeeError } = await supabase
-            .from('event_attendees')
-            .insert(eventAttendeeRecords);
-        if (attendeeError) throw attendeeError;
+        const {processedUsers} = await processUsers(mappedData);
+        const attendeeData = await createEventAttendees(eventId, processedUsers);
 
         return {
             event: eventData,
@@ -133,7 +164,7 @@ export async function createEvent({ eventName, eventDate, mappedData }) {
         };
 
     } catch (error) {
-        console.error('Error in updateEvent:', error);
+        console.error('Error in createEvent:', error);
         throw error;
     }
 }
