@@ -40,7 +40,7 @@ export default async function Home({params}:EventPageProps) {
                             Event Page:
                         </div>
                         {/*<EventDisplay eventDetails={eventDetails} eventAttendees={eventAttendees} />*/}
-                        <AttendeesTable eventAttendees={eventAttendees}/>
+                        <AttendeesTable eventAttendees={eventAttendees} eventId={eventId}/>
 
                         {/*    TODO:
                     show event details and display registered users (fetch from db)
