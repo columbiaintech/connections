@@ -76,6 +76,7 @@ async function findExistingUsers(emails: string[]){
 }
 
 async function createUsers(userData: any[]){
+    if (!userData.length) return [];
     const supabase = await createClient();
     try {
         const newUsers = userData.map(user=>({
@@ -87,9 +88,9 @@ async function createUsers(userData: any[]){
         const {data: insertedUsers, error} = await supabase
             .from('users')
             .insert(newUsers)
-            .select();
+            .select(`*`);
         if (error) throw error;
-        return insertedUsers;
+        return insertedUsers || [];
         }
         catch(error){
             console.error('Error creating users:', error);
@@ -98,9 +99,10 @@ async function createUsers(userData: any[]){
 }
 
 async function processUsers(userData: any[]){
-    const existingUsers = await findExistingUsers(userData.map(user=>user.email));
+    const emails = userData.map(user=>user.email);
+    const existingUsers = await findExistingUsers(emails);
     const newUsers = userData.filter(user=>!existingUsers.has(user.email));
-    const createdUsers = await createUsers(newUsers);
+    const createdUsers = newUsers.length>0 ? await createUsers(newUsers):[];
 
     createdUsers.forEach(user=>existingUsers.set(user.email, user.user_id));
 
@@ -114,18 +116,20 @@ async function processUsers(userData: any[]){
 }
 
 async function createEventAttendees(eventId: string, attendees: any[]){
+    if (!attendees.length) return [];
     const supabase = await createClient();
     try{
         const eventAttendeeRecords = attendees.map(attendee => ({
             event_id: eventId,
             user_id: attendee.user_id,
-            wants_intro: attendee.wants_intro || false,
-            registered_status: attendee.registered_status || null,
+            wants_intro: attendee.wants_intro,
+            registered_status: null,
         }));
 
         const { data, error } = await supabase
             .from('event_attendees')
-            .insert(eventAttendeeRecords);
+            .insert(eventAttendeeRecords)
+            .select();
         if (error) throw error;
         return data;
     } catch(error){
@@ -195,11 +199,7 @@ export async function fetchEventAttendees(eventId: string) {
     try {
         const { data, error } = await supabase
             .from('event_attendees')
-            .select(`
-                *,
-                users (
-*                )
-            `)
+            .select(`*, users (*)`)
             .eq('event_id', eventId);
 
         if (error) {
@@ -211,5 +211,70 @@ export async function fetchEventAttendees(eventId: string) {
     } catch (error) {
         console.error('Error fetching attendees:', error);
         return [];
+    }
+}
+
+export async function createAttendee(eventId: string, userData: any){
+    try{
+        const {processedUsers} = await processUsers([userData.users]);
+        const processedUser = processedUsers[0];
+        await createEventAttendees(eventId, [processedUser]);
+        const updatedAttendees = await fetchEventAttendees(eventId);
+        return {
+            event_attendees: updatedAttendees,
+            message: 'Successfully added user to the event.'
+        };
+    }catch(error){
+        console.error('Error in createAttendee:', error);
+    }
+}
+
+export async function updateAttendee(eventAttendeeData: any, userId: string, userData: any, eventId: string){
+    const supabase = await createClient();
+    try{
+        const {error} = await supabase
+            .from('users')
+            .update({...userData, updated_at: new Date().toISOString()})
+            .eq('user_id', userId)
+            .select();
+        if (error) throw error;
+
+        if (eventAttendeeData){
+            const{error}=await supabase
+                .from('event_attendees')
+                .update({wants_intro: eventAttendeeData.wants_intro})
+                .eq('user_id', userId)
+                .eq('event_id', eventId);
+            if (error) throw error;
+        }
+
+        const updatedAttendees = await fetchEventAttendees(eventId);
+        return {
+            event_attendees: updatedAttendees,
+            message: 'Successfully updated attendee data.'
+        };
+    }catch(error){
+        console.error('Error updating attendee data:', error);
+        throw error;
+    }
+}
+
+export async function deleteAttendee(userId: string, eventId: string){
+    const supabase = await createClient();
+    try{
+        const {error}= await supabase
+            .from('event_attendees')
+            .delete()
+            .eq('user_id', userId)
+            .eq('event_id', eventId);
+        if (error) throw error;
+        const updatedAttendees = await fetchEventAttendees(eventId);
+        return {
+            event_attendees: updatedAttendees,
+            message: 'Successfully deleted attendee.'
+        };
+    }catch(error){
+        console.error('Error deleting attendee:', error);
+        throw error;
     }
 }
