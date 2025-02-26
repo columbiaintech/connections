@@ -3,7 +3,10 @@ import Image from "next/image";
 import {fetchEventDetails} from "@/app/actions/updateData";
 import {fetchEventAttendees} from "@/app/actions/updateData";
 import EventDisplay from "@/components/EventDisplay";
+// import EventDetails from "@/components/EventDetails";
 import AttendeesTable from "@/components/AttendeesTable";
+import ConnectionsTable from "@/components/ConnectionsTable";
+import TabNavigator from "@/components/TabNavigator";
 
 type EventPageProps = {
     params: {
@@ -30,17 +33,33 @@ export default async function Home({params}:EventPageProps) {
         }
 
         return (
-            <div
-                className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+
+            <div className="w-screen bg-style1 bg-cover bg-no-repeat bg-center grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
                 <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-                    <p className="text-4xl font-[family-name:var(--font-geist-mono)]">Connections</p>
+                    <div className="flex items-center gap-2">
+                        <Image
+                            className="dark:invert"
+                            src="/connections-color.svg"
+                            alt="Connections logo mark"
+                            width={55}
+                            height={38}
+                            priority
+                        />
+                        <div className="text-5xl text-teal font-[family-name:var(--font-sourceSans3)] font-semibold">Connections</div>
+                    </div>
+
                     <div
-                        className="list-inside text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-                        <div className="mb-2 text-xl">
-                            Event Page:
-                        </div>
-                        {/*<EventDisplay eventDetails={eventDetails} eventAttendees={eventAttendees} />*/}
-                        <AttendeesTable eventAttendees={eventAttendees} eventId={eventId}/>
+                        className="bg-style2 bg-cover bg-no-repeat bg-center list-inside text-sm text-center sm:text-left shadow-sm sm:rounded-lg">
+                        <EventDisplay eventDetails={eventDetails} eventAttendees={eventAttendees} />
+                        {/*<EventDetails eventDetails={eventDetails} eventAttendees={eventAttendees} />*/}
+
+                        <TabNavigator tabs={[
+                            {id: 'attendees', label:'Attendees', content: <AttendeesTable eventAttendees={eventAttendees} eventId={eventId}/>},
+                            {id: 'connections', label:'Connections', content: <ConnectionsTable eventAttendees={eventAttendees} eventId={eventId}/>}
+                            ]}/>
+                        {/*<div className="rounded-sm text-gray-800 px-6 py-6 flex flex-col gap-4 items-start max-w-full">*/}
+                        {/*<AttendeesTable eventAttendees={eventAttendees} eventId={eventId}/>*/}
+                        {/*</div>*/}
 
                         {/*    TODO:
                     show event details and display registered users (fetch from db)
