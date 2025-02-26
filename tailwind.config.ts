@@ -9,8 +9,51 @@ export default {
   ],
   theme: {
   	extend: {
-  		colors: {
-  			background: 'hsl(var(--background))',
+		backgroundImage:{
+			'style1':'url("/clean.svg")',
+			'style2':'url("/noise.svg")',
+		},
+		colors: {
+			'rose': '#FF69A8',
+			'rose-600': '#ff81b7',
+			'rose-500': '#ff8ec1',
+			'rose-400': '#ffacd1',
+			'rose-300': '#ffcbd7',
+			'rose-200': '#ffdfe9',
+			'rose-100': '#ffeef5',
+
+			'teal': '#44B2BA',
+			'teal-500': '#4bb8c0',
+			'teal-400':'#5cbfc7',
+			'teal-300':'#7fd0d5',
+			'teal-200':'#b0dde0',
+			'teal-100':'#c3e4e7',
+
+			'sea': '#157A77',
+			'sea-100': '#cde7e3',
+			'sea-200': '#b8dcd7',
+			'sea-300': '#9ad0c5',
+			'sea-400': '#6db6b5',
+			'sea-500': '#4aa2a1',
+			'sea-600': '#2d8d8a',
+
+
+			'tangy': '#ff9861',
+			'tangy-100': '#ffe9d0',
+			'tangy-200': '#ffe2b1',
+			'tangy-400':'#ffba92',
+
+			'mustard': '#F7C568',
+			'mustard-600': '#f8cb79',
+
+			'mustard-100': '#fff4dc',
+			'mustard-200': '#ffeec6',
+
+			'blue': '#81A6FF',
+			'blue-100': '#e2eaff',
+			'blue-200': '#d8e0ff',
+
+			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
   				DEFAULT: 'hsl(var(--card))',

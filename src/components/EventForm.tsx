@@ -112,7 +112,7 @@ function EventForm({dbColumns}: EventFormProps) {
 
     return (
         <div>
-            <form className={styles.eventForm} onSubmit={handleSubmit}>
+            <form className="shadow-sm sm:rounded-lg bg-style2 text-gray-800 px-6 py-6 flex flex-col gap-4 items-start max-w-full"  onSubmit={handleSubmit}>
                 <textarea name="eventName" value={eventName} onChange={(e)=>setEventName(e.target.value)}
                           spellCheck="false"
                           autoCapitalize="words"
@@ -120,7 +120,7 @@ function EventForm({dbColumns}: EventFormProps) {
                         e.target.style.height = '';
                         e.target.style.height = e.target.scrollHeight + 'px';
                     }}
-                          className="font-[family-name:var(--font-geist-mono)] text-3xl"
+                          className="ps-2 text-gray-800 w-full font-[family-name:var(--font-sourceSans3)] text-3xl  rounded-sm"
                           placeholder={"Event Name"}
                 />
                 <DatePicker selected={eventDate} value={eventDate} onChange={handleDateChange}/>
@@ -128,8 +128,8 @@ function EventForm({dbColumns}: EventFormProps) {
                 <button
                     disabled={isLoading}
                     type="submit"
-                    className="mt-6 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                    className="text-s bg-sea-600 hover:bg-sea-500 text-white rounded-sm px-2 py-1 cursor-pointer font-[family-name:var(--font-fragment-mono)]">
+
                     {isLoading ? 'Creating Event...':'Create Event'}
                 </button>
 

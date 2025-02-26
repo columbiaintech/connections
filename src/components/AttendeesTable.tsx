@@ -85,10 +85,10 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
     };
 
     return(
-        <div className="container mx-auto p-4">
-            <h2 className="text-2xl font-semibold mb-4">Attendees</h2>
-            <div className="overflow-x-auto shadow-xs sm:rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200 table-auto">
+        <div className="container mx-auto py-2 px-4 ">
+            <h2 className="text-2xl font-semibold mt-4 mb-4 font-[family-name:var(--font-sourceSans3)]">Attendees</h2>
+            <div className="overflow-x-auto shadow-xs sm:rounded-lg box-border border-2 border-gray-100 font-[family-name:var(--font-fragment-mono)]">
+                <table className="min-w-full divide-y divide-gray-200 table-auto ">
                     <thead className="bg-gray-50">
                     <tr>
                         {userFields.map(field => (
@@ -97,10 +97,10 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
                             </th>
                         ))}
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wants Intro</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="sticky px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white divide-y divide-gray-100">
                     {isAddingNew && (
                         <tr>
                             {userFields.map(field => (
@@ -119,7 +119,7 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
                                 />
                             </td>
                             <td className="px-4 py-2 whitespace-nowrap">
-                                <button onClick={handleCreate} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                <button onClick={handleCreate} className="bg-sea-600 hover:bg-sea-500 text-white font-bold py-2 px-4 rounded">
                                     Create
                                 </button>
                             </td>
@@ -160,19 +160,19 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
                             <td className="px-4 py-2 whitespace-nowrap">
                                 {!isAddingNew && editing === attendee.users.user_id ? (
                                     <>
-                                        <button onClick={() => handleSave(attendee)} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">
+                                        <button onClick={() => handleSave(attendee)} className="bg-sea-600 hover:bg-sea-500 text-white font-bold py-2 px-4 rounded mr-2">
                                             Save
                                         </button>
-                                        <button onClick={() => setEditing(null)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                                        <button onClick={() => setEditing(null)} className="bg-sea-300 hover:bg-sea-400 text-gray-800  py-2 px-4 rounded">
                                             Cancel
                                         </button>
                                     </>
                                 ) : (
                                     <>
-                                        <button onClick={() => handleEdit(attendee)} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">
+                                        <button onClick={() => handleEdit(attendee)} className=" sticky bg-rose-100 hover:bg-rose-200 text-black  py-2 px-4 rounded mr-2">
                                             Edit
                                         </button>
-                                        <button onClick={() => handleDelete(attendee)} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                                        <button onClick={() => handleDelete(attendee)} className="sticky bg-rose-600 hover:bg-rose text-white font-bold py-2 px-4 rounded">
                                             Delete
                                         </button>
                                     </>
@@ -184,14 +184,17 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
                 </table>
             </div>
 
+            <div className="font-[family-name:var(--font-fragment-mono)]">
             {!isAddingNew ? (
-                <button onClick={() => setIsAddingNew(true)} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4">
+                <button onClick={() => setIsAddingNew(true)} className="bg-sea-600 hover:bg-sea-500 text-white py-2 px-4 rounded mt-4">
                     Add New Attendee
                 </button>
             ) : (
-                <button onClick={() => setIsAddingNew(false)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded mt-4">
+                <button onClick={() => setIsAddingNew(false)} className="bg-rose-400 hover:bg-rose-500 text-gray-800 py-2 px-4 rounded mt-4">
                     Cancel Add
                 </button>
             )}
-        </div>    );
+            </div>
+        </div>
+    );
 };

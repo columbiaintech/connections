@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
 }
 
 textarea{
@@ -81,5 +81,4 @@ textarea::-webkit-scrollbar{
 
 textarea{
   height: 36px;
-
 }

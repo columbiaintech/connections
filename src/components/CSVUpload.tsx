@@ -33,17 +33,17 @@ function CSVUpload({ dbColumns, onFileUpload, onMappingUpdate }: CSVUploadProps)
     });
 
     return (
-        <div className="w-full max-w-2xl mx-auto font-[family-name:var(--font-geist-mono)]">
-            <h3 className="text-lg font-medium mb-3">Upload CSV</h3>
+        <div className="w-full max-w-2xl mx-auto font-[family-name:var(--font-fragment-mono)]">
+            <h3 className="text-lg font-medium mb-3 text-gray-700">Upload CSV</h3>
             <div
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors ${
-                    isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400'
+                    isDragActive ? 'border-sea bg-sea-200' : 'border-rose-300 hover:border-rose-500'
                 }`}
             >
                 <input {...getInputProps()} />
-                <div className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-1 text-sm text-gray-600">
+                <div className="mx-auto h-12 w-12 text-gray-700" />
+                <p className="mt-1 text-sm text-gray-700">
                     Drag and drop your CSV file here, or click to select a file</p>
                 <p className="mt-1 text-xs text-gray-500">Only CSV files are accepted</p>
             </div>
