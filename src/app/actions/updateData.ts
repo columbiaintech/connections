@@ -44,15 +44,42 @@ type EventAttendee = {
 export async function fetchColumns() {
     const supabase = await createClient()
     try {
-        const { data, error } = await supabase.rpc('get_user_columns');
-
-        if (error) {
-            throw error;
+        const {data:userData, error:userError } = await supabase.rpc('get_user_columns');
+        if (userError) {
+            throw userError;
         }
 
-        return data.filter(column =>
+        const { data:attendeeData, error:attendeeError } = await supabase
+            .from('event_attendees')
+            .select('*')
+            .limit(1)
+            .then(result => {
+                if (result.data && result.data.length > 0) {
+                    return {
+                        data: Object.keys(result.data[0]),
+                        error: null
+                    };
+                }
+                console.error('Ok here:', error);
+
+                return supabase.rpc('get_event_attendee_columns');
+                console.error('Failed here:', error);
+
+            });
+
+        if (attendeeError) {
+            throw attendeeError;
+        }
+
+        const userCols = userData.filter(column =>
             !['created_at', 'updated_at', 'user_id'].includes(column)
         );
+        const attendeeCols = attendeeData.filter(column =>
+            !['event_id', 'user_id', 'created_at'].includes(column)
+        );
+
+        return [...userCols, ...attendeeCols];
+
 
     } catch (error) {
         console.error('Error fetching columns:', error);
@@ -122,7 +149,7 @@ async function createEventAttendees(eventId: string, attendees: any[]){
         const eventAttendeeRecords = attendees.map(attendee => ({
             event_id: eventId,
             user_id: attendee.user_id,
-            wants_intro: attendee.wants_intro,
+            wants_intro: attendee.wants_intro||false,
             registered_status: null,
         }));
 
