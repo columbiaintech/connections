@@ -2,9 +2,9 @@
 
 import { useRive } from '@rive-app/react-canvas';
 
-export default function RiveEmbed() {
+export default function Logo() {
     const { rive, RiveComponent } = useRive({
-        src: "/untitled.riv", // Sample Rive file
+        src: "/untitled.riv",
         stateMachines: "State Machine 1",
         autoplay: true
     });
@@ -15,11 +15,14 @@ export default function RiveEmbed() {
         }
     };
     return (
-        <div
-            className='cursor-pointer relative w-[100px] h-[200px]'
-            onMouseEnter={handleMouseEnter}
-        >
-            <RiveComponent />
+        <div className="flex items-center">
+            <div
+                className='cursor-pointer relative w-[75px] h-[75px]'
+                onMouseEnter={handleMouseEnter}
+            >
+                <RiveComponent />
+            </div>
         </div>
+
     );
 }
