@@ -111,7 +111,7 @@ function EventForm({dbColumns}: EventFormProps) {
     }
 
     return (
-        <div>
+        <div className="max-w-xl px-4 sm:px-0 mx-auto text-base w-full">
             <form className="shadow-sm sm:rounded-lg bg-style2 text-gray-800 px-6 py-6 flex flex-col gap-4 items-start max-w-full"  onSubmit={handleSubmit}>
                 <textarea name="eventName" value={eventName} onChange={(e)=>setEventName(e.target.value)}
                           spellCheck="false"
