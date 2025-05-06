@@ -7,6 +7,7 @@ import EventDisplay from "@/components/EventDisplay";
 import AttendeesTable from "@/components/AttendeesTable";
 import ConnectionsTable from "@/components/ConnectionsTable";
 import TabNavigator from "@/components/TabNavigator";
+import Navbar from "@/components/Navbar";
 
 type EventPageProps = {
     params: {
@@ -35,23 +36,11 @@ export default async function Home({params}:EventPageProps) {
         return (
 
             <div className="w-screen bg-style1 bg-cover bg-no-repeat bg-center grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-                <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-                    <div className="flex items-center gap-2">
-                        <Image
-                            className="dark:invert"
-                            src="/connections-color.svg"
-                            alt="Connections logo mark"
-                            width={55}
-                            height={38}
-                            priority
-                        />
-                        <div className="text-5xl text-teal font-[family-name:var(--font-sourceSans3)] font-semibold">Connections</div>
-                    </div>
-
+                <Navbar />
+                <main className="w-full flex flex-col gap-8 row-start-2 items-center sm:items-start">
                     <div
-                        className="bg-style2 bg-cover bg-no-repeat bg-center list-inside text-sm text-center sm:text-left shadow-sm sm:rounded-lg">
+                        className="w-full bg-style2 bg-cover bg-no-repeat bg-center list-inside text-sm text-center sm:text-left shadow-sm sm:rounded-lg">
                         <EventDisplay eventDetails={eventDetails} eventAttendees={eventAttendees} />
-                        {/*<EventDetails eventDetails={eventDetails} eventAttendees={eventAttendees} />*/}
 
                         <TabNavigator tabs={[
                             {id: 'attendees', label:'Attendees', content: <AttendeesTable eventAttendees={eventAttendees} eventId={eventId}/>},
