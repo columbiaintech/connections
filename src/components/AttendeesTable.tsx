@@ -85,10 +85,10 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
     };
 
     return(
-        <div className="container mx-auto py-2 px-4 ">
+        <div className="w-full container mx-auto py-2 px-4 ">
             <h2 className="text-2xl font-semibold mt-4 mb-4 font-[family-name:var(--font-sourceSans3)]">Attendees</h2>
             <div className="overflow-x-auto shadow-xs sm:rounded-lg box-border border-2 border-gray-100 font-[family-name:var(--font-fragment-mono)]">
-                <table className="min-w-full divide-y divide-gray-200 table-auto ">
+                <table className="w-full divide-y divide-gray-200 table-auto ">
                     <thead className="bg-gray-50">
                     <tr>
                         {userFields.map(field => (
