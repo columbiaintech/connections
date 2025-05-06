@@ -15,7 +15,7 @@ export default function TabNavigator({ tabs }: TabNavigatorProps) {
     const [activeTab, setActiveTab] = useState(tabs[0]?.id);
 
     return (
-        <div className="">
+        <div className="w-full h-full">
             <div className="">
                 <nav className="flex -mb-px font-[family-name:var(--font-fragment-mono)]">
                     {tabs.map((tab) => (
