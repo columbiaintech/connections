@@ -126,15 +126,24 @@ function EventForm({dbColumns}: EventFormProps) {
                 <DatePicker selected={eventDate} value={eventDate} onChange={handleDateChange}/>
                 <CSVUpload dbColumns={dbColumns} onFileUpload={handleFileUpload} onMappingUpdate={handleMappingUpdate}/>
                 <button
-                    disabled={isLoading}
                     type="submit"
-                    className="text-s bg-sea-600 hover:bg-sea-500 text-white rounded-sm px-2 py-1 cursor-pointer font-[family-name:var(--font-fragment-mono)]">
+                    className="
+                          text-s text-white rounded-sm px-2 py-1
+                          flex items-center gap-4
+                          justify-center
+                          rounded-lg border border-sea-600
+                          bg-gradient-to-r from-sea-600 to-sea
+                          hover:opacity-90
+                            shadow-[0_2px_0] shadow-sea
 
+                          transition-all duration-200 ease-in-out
+                          cursor-pointer font-[family-name:var(--font-fragment-mono)]"
+                >
                     {isLoading ? 'Creating Event...':'Create Event'}
                 </button>
+                {error && <p className="text-red-500">{error}</p>}
 
             </form>
-            {error && <p className="text-red-500">{error}</p>}
 
         </div>
     );
