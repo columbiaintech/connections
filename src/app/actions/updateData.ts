@@ -305,3 +305,105 @@ export async function deleteAttendee(userId: string, eventId: string){
         throw error;
     }
 }
+
+export async function generateRandomConnections(eventId: string) {
+    const supabase = await createClient();
+    try {
+        const { data: attendees, error: attendeesError } = await supabase
+            .from('event_attendees')
+            .select('user_id')
+            .eq('event_id', eventId)
+            .eq('wants_intro', true);
+
+        if (attendeesError) throw attendeesError;
+        if (!attendees || attendees.length < 2) {
+            return {
+                success: false,
+                message: 'Not enough attendees to generate connections',
+                connections: []
+            };
+        }
+
+        const { data: existingConnections, error: connectionsError } = await supabase
+            .from('connections')
+            .select('user1_id, user2_id')
+            .eq('event_id', eventId);
+        if (connectionsError) throw connectionsError;
+        const existingConnectionSet = new Set();
+        existingConnections?.forEach(c => {
+            existingConnectionSet.add(`${c.user1_id}-${c.user2_id}`);
+            existingConnectionSet.add(`${c.user2_id}-${c.user1_id}`);
+        });
+
+        const userIds = attendees.map(a => a.user_id);
+        const shuffledUserIds = [...userIds].sort(() => Math.random() - 0.5);
+
+        const connections = [];
+        const paired = new Set();
+
+        for (let i = 0; i < shuffledUserIds.length; i++) {
+            if (paired.has(shuffledUserIds[i])) continue;
+
+            for (let j = i + 1; j < shuffledUserIds.length; j++) {
+                if (paired.has(shuffledUserIds[j])) continue;
+
+                const connectionKey = `${shuffledUserIds[i]}-${shuffledUserIds[j]}`;
+                if (existingConnectionSet.has(connectionKey)) continue;
+
+                connections.push({
+                    connection_id: uuidv4(),
+                    user1_id: shuffledUserIds[i],
+                    user2_id: shuffledUserIds[j],
+                    event_id: eventId,
+                    created_at: new Date().toISOString(),
+                    status: 'pending'
+                });
+
+                paired.add(shuffledUserIds[i]);
+                paired.add(shuffledUserIds[j]);
+                break;
+            }
+        }
+
+        if (connections.length > 0) {
+            const { data: insertedConnections, error: insertError } = await supabase
+                .from('connections')
+                .insert(connections)
+                .select();
+
+            if (insertError) throw insertError;
+
+            return {
+                success: true,
+                message: `Created ${connections.length} new connections`,
+                connections: insertedConnections
+            };
+        } else {
+            return {
+                success: false,
+                message: 'No connections could be made',
+                connections: []
+            };
+        }
+
+    } catch (error) {
+        console.error('Error generating random connections:', error);
+        throw error;
+    }
+}
+
+export async function fetchEventConnections(eventId: string) {
+    const supabase = await createClient();
+    try {
+        const { data, error } = await supabase
+            .from('connections')
+            .select(`*`)
+            .eq('event_id', eventId);
+
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('Error fetching connections:', error);
+        return [];
+    }
+}
