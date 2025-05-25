@@ -3,7 +3,7 @@ import Navbar from "@/components/Navbar";
 import SignUpForm from "@/components/SignUpForm";
 
 
-export default async function SignIn() {
+export default async function SignUp() {
     return (
         <div className="w-screen h-screen bg-style1 text-teal bg-cover bg-no-repeat bg-center">
             <div className="p-4">
