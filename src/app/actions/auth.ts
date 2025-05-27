@@ -52,7 +52,7 @@ export async function signup(formData: FormData) {
     if (data?.user?.identities?.length === 0) {
         return { error: 'Email already exists' }
     }
-    return { success: true }
+    return { success: true, data}
 }
 
 
