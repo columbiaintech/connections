@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { confirmSignUp } from '../app/actions/auth';
+import { createClient } from '../../utils/supabase/client';
 
 export default function EmailConfirmation() {
     const [status, setStatus] = useState('verifying');
@@ -15,7 +16,7 @@ export default function EmailConfirmation() {
         async function verifyEmail() {
             const tokenHash = searchParams.get('token_hash');
             const type = searchParams.get('type');
-            const next = searchParams.get('next') || '/';
+            const next = searchParams.get('next') || '/dashboard';
 
             if (!tokenHash || !type) {
                 setStatus('error');
@@ -45,6 +46,9 @@ export default function EmailConfirmation() {
                 } else if (data?.user) {
                     setStatus('success');
                     setUser(data.user);
+                    setTimeout(() => {
+                        router.push('/dashboard');
+                    }, 2000);
                 } else {
                     setStatus('error');
                     setErrorMessage('Email verification completed but no user data received.');
