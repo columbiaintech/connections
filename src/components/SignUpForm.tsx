@@ -17,22 +17,24 @@ function SignUpForm() {
         setIsLoading(true);
 
         try{
-                const emailAddress = formData.get('emailAddress');
-                const password = formData.get('password');
-                const firstName = formData.get('firstName');
-                const lastName = formData.get('lastName');
-                if (!firstName || !lastName || !emailAddress || !password) {
-                    setError('Please fill out all fields');
-                    setIsLoading(false);
-                    return;
-                }
-                const result = await signup(formData);
-                if (result?.error) {
-                    setError(result.error.message);}
-                else{
-                    setIsSuccess(true);
-                }
-            } catch(e){
+            const emailAddress = formData.get('emailAddress');
+            const password = formData.get('password');
+            const firstName = formData.get('firstName');
+            const lastName = formData.get('lastName');
+            if (!firstName || !lastName || !emailAddress || !password) {
+                setError('Please fill out all fields');
+                setIsLoading(false);
+                return;
+            }
+            const result = await signup(formData);
+            if (result?.error) {
+                setError(result.error);
+            } else if (result?.success) {
+                setIsSuccess(true);
+            } else {
+                setError('An error has occurred. Please try again.');
+            }
+        } catch(e){
                 setError(e.message||'An error has occurred. Please try again.')
             } finally{
             setIsLoading(false);
