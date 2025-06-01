@@ -5,10 +5,7 @@ import SignUpForm from "@/components/SignUpForm";
 
 export default async function SignUp() {
     return (
-        <div className="w-screen h-screen bg-style1 text-teal bg-cover bg-no-repeat bg-center">
-            <div className="p-4">
-                <Navbar />
-            </div>
+        <div>
             <div className="max-w-sm mx-auto sm:pt-12">
 
                 <div className="grid grid-rows-[20px_1fr_20px] justify-items-center">
