@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import {Fragment_Mono} from "next/font/google";
 import {Source_Sans_3} from "next/font/google";
 import Image from "next/image";
+import Navbar from "@/components/Navbar";
 
 import "./styles/globals.css";
 
@@ -30,8 +31,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${fragmentMono.variable} ${sourceSans3.variable} antialiased`}
+        className={`${fragmentMono.variable} ${sourceSans3.variable} antialiased w-screen h-screen bg-style1 bg-cover bg-no-repeat bg-center`}
       >
+      <Navbar></Navbar>
         {children}
       </body>
     </html>
