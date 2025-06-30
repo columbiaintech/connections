@@ -102,7 +102,7 @@ async function findExistingUsers(emails: string[]){
     }
 }
 
-async function createUsers(userData: any[]){
+async function createMembers(userData: any[]){
     if (!userData.length) return [];
     const supabase = await createClient();
     try {
@@ -113,14 +113,14 @@ async function createUsers(userData: any[]){
             updated_at: new Date().toISOString()
         }));
         const {data: insertedUsers, error} = await supabase
-            .from('users')
+            .from('members')
             .insert(newUsers)
             .select(`*`);
         if (error) throw error;
         return insertedUsers || [];
         }
         catch(error){
-            console.error('Error creating users:', error);
+            console.error('Error creating members:', error);
             throw error;
         }
 }
@@ -129,7 +129,7 @@ async function processUsers(userData: any[]){
     const emails = userData.map(user=>user.email);
     const existingUsers = await findExistingUsers(emails);
     const newUsers = userData.filter(user=>!existingUsers.has(user.email));
-    const createdUsers = newUsers.length>0 ? await createUsers(newUsers):[];
+    const createdUsers = newUsers.length>0 ? await createMembers(newUsers):[];
 
     createdUsers.forEach(user=>existingUsers.set(user.email, user.user_id));
 
@@ -226,7 +226,7 @@ export async function fetchEventAttendees(eventId: string) {
     try {
         const { data, error } = await supabase
             .from('event_attendees')
-            .select(`*, users (*)`)
+            .select(`*, members (*)`)
             .eq('event_id', eventId);
 
         if (error) {
@@ -405,5 +405,182 @@ export async function fetchEventConnections(eventId: string) {
     } catch (error) {
         console.error('Error fetching connections:', error);
         return [];
+    }
+}
+
+export async function userHasGroups(userId: string): Promise<boolean> {
+    const supabase = await createClient();
+    try {
+        const { data, error } = await supabase
+            .from('user_groups')
+            .select('group_id')
+            .eq('user_id', userId)
+            .limit(1);
+
+        if (error) throw error;
+        return data.length > 0;
+    } catch (error) {
+        console.error('Error checking user groups:', error);
+        return false;
+    }
+}
+
+export async function fetchUserGroupDetails(userId: string) {
+    const supabase = await createClient();
+
+    try {
+        const { data: userGroup, error: groupError } = await supabase
+            .from('user_groups')
+            .select('group_id, groups(*)')
+            .eq('user_id', userId)
+            .limit(1)
+            .single();
+
+        if (groupError) throw groupError;
+        const groupId = userGroup.group_id;
+
+        const { data: events, error: eventsError } = await supabase
+            .from('events')
+            .select('*')
+            .eq('group_id', groupId);
+
+        if (eventsError) throw eventsError;
+
+        const { data: members, error: membersError } = await supabase
+            .from('user_groups')
+            .select('user_id, users(*)')
+            .eq('group_id', groupId);
+
+        if (membersError) throw membersError;
+
+        const eventIds = events.map(e => e.event_id);
+
+        let attendees = [];
+        if (eventIds.length > 0) {
+            const { data: attendeesData, error: attendeesError } = await supabase
+                .from('event_attendees')
+                .select('*, users(*)')
+                .in('event_id', eventIds);
+
+            if (attendeesError) throw attendeesError;
+            attendees = attendeesData;
+        }
+
+        return {
+            group: userGroup.groups,
+            events,
+            members: members.map(m => m.users),
+            attendees
+        };
+    } catch (error) {
+        console.error('Error fetching user group details:', error);
+        throw error;
+    }
+}
+
+export async function createGroupWithInvites(groupName: string, invites: Array<{ email: string; role: string }>) {
+    const supabase = await createClient();
+    try {
+        const {data: {user}, error: userError} = await supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!user) {
+            throw new Error('User not authenticated');
+        }
+        const groupId = uuidv4();
+        const { data: groupData, error: groupError } = await supabase
+            .from('groups')
+            .insert({
+                group_id:groupId,
+                group_name: groupName,
+                created_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+        if (groupError) throw groupError;
+
+        const { error: ownerError } = await supabase
+            .from('user_groups')
+            .insert({
+                user_id: user.id,
+                group_id: groupId,
+                role: 'owner',
+                created_at: new Date().toISOString()
+            });
+
+        if (ownerError) throw ownerError;
+
+        if (invites.length > 0) {
+            const validInvites = invites.filter(invite => invite.email.trim());
+
+            if (validInvites.length > 0) {
+                for (const invite of validInvites) {
+                    await sendGroupInvitation(invite.email, groupId, invite.role, groupName);
+                }
+            }
+        }
+
+        return {
+            group: groupData,
+            groupId: groupId,
+            message: 'Successfully created group and added members.'
+        };
+    } catch (error) {
+        console.error('Error creating group with invites:', error);
+        throw error;
+    }
+}
+
+export async function sendGroupInvitation(email: string, groupId: string, role: string, groupName: string){
+    const supabase = await createClient();
+
+    const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
+        data: {
+            group_id: groupId,
+            role: role,
+            group_name: groupName
+        },
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/accept-invitation?group=${groupId}&role=${role}`
+    });
+
+    if (error) throw error;
+}
+
+export async function acceptGroupInvitation(groupId: string, role: string) {
+    const supabase = await createClient();
+
+    try {
+        const {data: {user}, error: userError} = await supabase.auth.getUser();
+        if (userError || !user) throw new Error('User not authenticated');
+
+        // Add user to the group
+        const { error: userGroupError } = await supabase
+            .from('user_groups')
+            .insert({
+                user_id: user.id,
+                group_id: groupId,
+                role: role,
+                created_at: new Date().toISOString()
+            });
+
+        if (userGroupError) throw userGroupError;
+
+        const { error: memberError } = await supabase
+            .from('members')
+            .insert({
+                user_id: user.id,
+                group_id: groupId,
+                email: user.email,
+                name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            });
+
+        if (memberError) throw memberError;
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error accepting invitation:', error);
+        throw error;
     }
 }
