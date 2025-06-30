@@ -4,56 +4,50 @@ import { fetchUserGroupDetails } from "@/app/actions/updateData";
 import AttendeesTable from "@/components/AttendeesTable";
 
 
-async function GroupInfo({ userId }: { userId: string }) {
-    const [loading, setLoading] = useState(true);
-    const [events, setEvents] = useState<any[]>([]);
-    const [members, setMembers] = useState<any[]>([]);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        async function loadGroupData() {
-            try {
-                const { events, members } = await fetchGroupEventsAndMembers(org.group_id);
-                setEvents(events);
-                setMembers(members);
-            } catch (err) {
-                setError("Failed to fetch group data");
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        loadGroupData();
-    }, [org.group_id]);
-
-    if (loading) return <p>Loading group info...</p>;
-    if (error) return <p className="text-red-500">{error}</p>;
+export default function GroupInfo({ groupData}:{groupData: any}) {
+    const { group, events, members, attendees } = groupData;
+    const getAttendeesForEvent = (eventId: string) => {
+        return attendees.filter((a: any) => a.event_id === eventId);
+    };
 
     return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold">{org.group_name}</h2>
+        <div className="space-y-10 card-white">
+            <header>
+                <h1 className="ps-2 text-loch w-full font-[family-name:var(--font-sourceSans3)] text-3xl  rounded-sm">Your {group.group_name} Organization</h1>
+            </header>
 
             <section>
-                <h3 className="text-xl font-semibold">Events</h3>
+                <h3 className="text-xl font-semibold mb-2">Events</h3>
                 {events.length === 0 ? (
-                    <p>No events found.</p>
-                ) : (
-                    events.map(event => (
-                        <div key={event.event_id} className="border p-4 rounded">
-                            <h4 className="text-lg font-semibold">{event.event_name}</h4>
-                            <p className="text-sm text-gray-600">{event.event_date}</p>
-                            <AttendeesTable eventAttendees={event.attendees} eventId={event.event_id} />
+                    <div className="card-pink p-6 rounded-lg text-center space-y-3">
+                        <p className="text-lg text-berry">No events found for this organization.</p>
+                        <p className="text-sm text-steel">Create an event to invite members and start connecting.</p>
+                        <div className="mt-4">
+                            <a href="/dashboard/create-event" className="btn-primary">Create Event</a>
                         </div>
-                    ))
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {events.map((event: any) => (
+                            <div key={event.event_id} className="border p-4 rounded">
+                                <h4 className="text-lg font-semibold">{event.event_name}</h4>
+                                <p className="text-sm text-gray-600">{event.event_date}</p>
+                                <AttendeesTable
+                                    eventAttendees={getAttendeesForEvent(event.event_id)}
+                                    eventId={event.event_id}
+                                />
+                            </div>
+                        ))}
+                    </div>
                 )}
             </section>
 
             <section>
-                <h3 className="text-xl font-semibold">Members</h3>
-                <ul className="list-disc ml-6">
-                    {members.map(member => (
+                <h3 className="text-xl font-semibold mb-2">Members</h3>
+                <ul className="list-disc ml-6 space-y-1">
+                    {members.map((member: any) => (
                         <li key={member.user_id}>
-                            {member.email} - {member.role}
+                            {member.email} – {member.role || "member"}
                         </li>
                     ))}
                 </ul>
