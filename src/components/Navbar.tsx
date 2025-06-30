@@ -1,11 +1,14 @@
 import Logo from "./Logo";
 import React from "react";
+import Link from "next/link";
+import {logout} from "@/app/actions/auth";
 
 
 export default function Navbar() {
     return (
 
-        <div className="max-w-xl px-4 sm:px-0 mx-auto text-base pt-4 w-full">
+        <div className="px-4">
+        <div className=" px-4 sm:px-0 mx-auto text-base pt-4 w-full">
         <div className="flex items-center gap-2 justify-between">
 
             <div className="flex items-center">
@@ -17,24 +20,29 @@ export default function Navbar() {
             </div>
 
 
-            <div className="flex-right">
-                <button
-                    type="submit"
-                    className="
-                          text-s text-white rounded-sm px-2 py-1
-                          flex items-center gap-4
-                          justify-center
-                          rounded-lg border border-sea-600
-                          bg-gradient-to-r from-sea-600 to-sea
-                          hover:opacity-90
-                            shadow-[0_2px_0] shadow-sea
+            <div className="flex items-center gap-5 text-sm">
+                <form>
+                    <button
+                        type="submit"
+                        formAction={logout}
+                        className="btn-secondary"
+                    >
+                        Sign Out
+                    </button>
+                </form>
 
-                          transition-all duration-200 ease-in-out
-                          cursor-pointer font-[family-name:var(--font-fragment-mono)]"
-                >
+                <Link href="/signin"
+                    type="submit"
+                    className="btn-primary">
                     {'Log In'}
-                </button>
+                </Link>
+                <Link href="/signup" className="nav-link">Sign Up</Link>
+                <Link href="/dashboard" className="nav-link">Dashboard</Link>
+                <Link href="/" className="nav-link">Home</Link>
+                <Link href="/events/30a2d8c2-ca72-464d-a79b-8347479d3440" className="nav-link">Event</Link>
+
             </div>
+        </div>
         </div>
         </div>
     )
