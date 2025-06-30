@@ -12,7 +12,7 @@ interface AttendeesTableProps{
 }
 
 export default function AttendeesTable({eventAttendees, eventId}: AttendeesTableProps){
-    const userFields = eventAttendees.length>0 ? Object.keys(eventAttendees[0].users).filter(key=>!['user_id', 'created_at', 'updated_at'].includes(key)):[];
+    const userFields = eventAttendees.length>0 ? Object.keys(eventAttendees[0].members).filter(key=>!['user_id', 'created_at', 'updated_at'].includes(key)):[];
     const [attendees, setAttendees] = useState(eventAttendees);
     const [editing, setEditing] = useState(null);
     const [isAddingNew, setIsAddingNew] = useState(false);
@@ -32,7 +32,7 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
 
     const handleEdit = (attendee) => {
         if (isAddingNew) return;
-        setEditing(attendee.users.user_id);
+        setEditing(attendee.members.user_id);
     };
 
     const handleSave = async (attendee) => {
@@ -40,7 +40,7 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
             const eventAttendeeData = {
                 wants_intro: attendee.wants_intro
             }
-            const updated = await updateAttendee(eventAttendeeData, attendee.users.user_id, attendee.users, eventId);
+            const updated = await updateAttendee(eventAttendeeData, attendee.members.user_id, attendee.members, eventId);
             if (updated?.event_attendees){
                 setAttendees(updated.event_attendees);
             }
@@ -53,7 +53,7 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
 
     const handleDelete = async (attendee) => {
         try{
-            const updated = await deleteAttendee(attendee.users.user_id, eventId)
+            const updated = await deleteAttendee(attendee.members.user_id, eventId)
             if (updated?.event_attendees){
                 setAttendees(updated.event_attendees);
             }
@@ -80,14 +80,14 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
     const handleCheckboxChange = (userId: string, checked: boolean) => {
         setAttendees(current =>
             current.map(a =>
-                a.users.user_id === userId ? {...a, wants_intro: checked} : a
+                a.members.user_id === userId ? {...a, wants_intro: checked} : a
             ));
     };
 
     return(
         <div className="w-full container mx-auto py-2 px-4 ">
-            <h2 className="text-2xl font-semibold mt-4 mb-4 font-[family-name:var(--font-sourceSans3)]">Attendees</h2>
-            <div className="overflow-x-auto shadow-xs sm:rounded-lg box-border border-2 border-gray-100 font-[family-name:var(--font-fragment-mono)]">
+            <h2 className="text-2xl font-semibold mt-4 mb-4">Attendees</h2>
+            <div className="overflow-x-auto shadow-xs sm:rounded-lg box-border border-2 border-gray-100">
                 <table className="w-full divide-y divide-gray-200 table-auto ">
                     <thead className="bg-gray-50">
                     <tr>
@@ -107,7 +107,7 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
                                 <td key={field} className="px-4 py-2 whitespace-nowrap">
                                     <input
                                         type="text"
-                                        onChange={e => setNewAttendee(prev => ({ ...prev, users: { ...prev.users, [field]: e.target.value } }))}
+                                        onChange={e => setNewAttendee(prev => ({ ...prev, members: { ...prev.members, [field]: e.target.value } }))}
                                         className="w-full p-1 border rounded"
                                     />
                                 </td>
@@ -119,38 +119,38 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
                                 />
                             </td>
                             <td className="px-4 py-2 whitespace-nowrap">
-                                <button onClick={handleCreate} className="bg-sea-600 hover:bg-sea-500 text-white font-bold py-2 px-4 rounded">
+                                <button onClick={handleCreate} className="btn-primary">
                                     Create
                                 </button>
                             </td>
                         </tr>
                     )}
                     {attendees.map(attendee => (
-                        <tr key={attendee.users.user_id}>
+                        <tr key={attendee.members.user_id}>
                             {userFields.map(field => (
                                 <td key={field} className="px-4 py-2 whitespace-nowrap">
-                                    {editing === attendee.users.user_id ? (
+                                    {editing === attendee.members.user_id ? (
                                         <input
                                             type="text"
-                                            defaultValue={attendee.users[field] || ''}
+                                            defaultValue={attendee.members[field] || ''}
                                             onChange={e => {
-                                                const updatedAttendee = { ...attendee, users: { ...attendee.users, [field]: e.target.value } };
-                                                setAttendees(current => current.map(a => a.users.user_id === attendee.users.user_id ? updatedAttendee : a));
+                                                const updatedAttendee = { ...attendee, users: { ...attendee.members, [field]: e.target.value } };
+                                                setAttendees(current => current.map(a => a.members.user_id === attendee. members.user_id ? updatedAttendee : a));
                                             }}
                                             className="w-full p-1 border rounded"
                                         />
                                     ) : (
-                                        attendee.users[field] || 'N/A'
+                                        attendee.members[field] || 'N/A'
                                     )}
                                 </td>
                             ))}
                             <td className="px-4 py-2 whitespace-nowrap">
-                                {editing === attendee.users.user_id ? (
+                                {editing === attendee.members.user_id ? (
                                     <input
                                         type="checkbox"
                                         defaultChecked={attendee.wants_intro}
                                         onChange={e => {
-                                            handleCheckboxChange(attendee.users.user_id, e.target.checked);
+                                            handleCheckboxChange(attendee.members.user_id, e.target.checked);
                                         }}
                                     />
                                 ) : (
@@ -158,21 +158,21 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
                                 )}
                             </td>
                             <td className="px-4 py-2 whitespace-nowrap">
-                                {!isAddingNew && editing === attendee.users.user_id ? (
+                                {!isAddingNew && editing === attendee.members.user_id ? (
                                     <>
-                                        <button onClick={() => handleSave(attendee)} className="bg-sea-600 hover:bg-sea-500 text-white font-bold py-2 px-4 rounded mr-2">
+                                        <button onClick={() => handleSave(attendee)} className="btn-primary mr-2">
                                             Save
                                         </button>
-                                        <button onClick={() => setEditing(null)} className="bg-sea-300 hover:bg-sea-400 text-gray-800  py-2 px-4 rounded">
+                                        <button onClick={() => setEditing(null)} className="btn-secondary mr-2">
                                             Cancel
                                         </button>
                                     </>
                                 ) : (
                                     <>
-                                        <button onClick={() => handleEdit(attendee)} className=" sticky bg-rose-100 hover:bg-rose-200 text-black  py-2 px-4 rounded mr-2">
+                                        <button onClick={() => handleEdit(attendee)} className=" sticky  btn-tertiary mr-2">
                                             Edit
                                         </button>
-                                        <button onClick={() => handleDelete(attendee)} className="sticky bg-rose-600 hover:bg-rose text-white font-bold py-2 px-4 rounded">
+                                        <button onClick={() => handleDelete(attendee)} className="sticky btn-destructive mr-2">
                                             Delete
                                         </button>
                                     </>
@@ -184,13 +184,13 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
                 </table>
             </div>
 
-            <div className="font-[family-name:var(--font-fragment-mono)]">
+            <div className="mt-4">
             {!isAddingNew ? (
-                <button onClick={() => setIsAddingNew(true)} className="bg-sea-600 hover:bg-sea-500 text-white py-2 px-4 rounded mt-4">
+                <button onClick={() => setIsAddingNew(true)} className="btn-primary">
                     Add New Attendee
                 </button>
             ) : (
-                <button onClick={() => setIsAddingNew(false)} className="bg-rose-400 hover:bg-rose-500 text-gray-800 py-2 px-4 rounded mt-4">
+                <button onClick={() => setIsAddingNew(false)} className="btn-outline">
                     Cancel Add
                 </button>
             )}
