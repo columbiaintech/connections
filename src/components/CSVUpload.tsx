@@ -34,7 +34,6 @@ function CSVUpload({ dbColumns, onFileUpload, onMappingUpdate }: CSVUploadProps)
 
     return (
         <div className="w-full max-w-2xl mx-auto font-[family-name:var(--font-fragment-mono)]">
-            <h3 className="text-lg font-medium mb-3 text-gray-700">Upload CSV</h3>
             <div
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors ${

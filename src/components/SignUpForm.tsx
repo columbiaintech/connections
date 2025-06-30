@@ -43,8 +43,8 @@ function SignUpForm() {
 
     if (isSuccess) {
         return (
-            <div className="max-w-xl px-4 sm:px-0 mx-auto text-base w-full">
-                <div className="shadow-sm sm:rounded-lg bg-style2 text-gray-800 px-6 py-6 flex flex-col gap-4 items-start max-w-full">
+            <div className=" max-w-xl px-4 sm:px-0 mx-auto text-base w-full">
+                <div className="shadow-sm sm:rounded-lg text-gray-800 px-6 py-6 flex flex-col gap-4 items-start max-w-full">
                     <h2 className="text-xl font-semibold text-gray-800">Check your email</h2>
                     <p className="text-gray-600">
                         We've sent a confirmation link to your email address. Please check your inbox and click the link to confirm your account.
@@ -56,7 +56,7 @@ function SignUpForm() {
 
     return (
         <div className="max-w-xl px-4 sm:px-0 mx-auto text-base w-full">
-            <form action={handleSignUp} className=" shadow-sm sm:rounded-lg bg-style2 text-gray-800 px-6 py-6 flex flex-col gap-4 items-start max-w-full">
+            <form action={handleSignUp} className="card-white sm:rounded-lg bg-style2 text-gray-800 px-6 py-6 flex flex-col gap-4 items-start max-w-full">
                 <div className="flex-row">
                     <div className="flex items-center gap-4 pb-4 w-full">
                         <div className="flex-col">

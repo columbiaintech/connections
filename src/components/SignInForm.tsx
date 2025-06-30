@@ -6,7 +6,7 @@ function SignInForm() {
 
     return (
         <div className="w-full px-4 sm:px-0 mx-auto text-base">
-            <form className=" shadow-sm sm:rounded-lg bg-style2 text-gray-800 px-6 py-6 flex flex-col gap-4 items-start max-w-full">
+            <form className="card-white sm:rounded-lg text-gray-800 px-6 py-6 flex flex-col gap-4 items-start max-w-full">
                 <div className="flex flex-col w-full">
                     <div className="flex items-center gap-4 pb-4 w-full flex-row">
                         <div className="w-full">

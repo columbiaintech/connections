@@ -98,6 +98,21 @@ textarea::-webkit-scrollbar{
   .nav-link{
     @apply text-sm text-steel font-[family-name:var(--font-sourceSans3)] hover:underline underline-offset-4 hover:decoration-steel/50
   }
+
+  .card-pink{
+    @apply text-center py-10 p-4 bg-rose-100/25  border border-berry/25 rounded-lg font-[family-name:var(--font-sourceSans3)]
+  }
+  .card-grey{
+    @apply text-center py-10 p-4 bg-teal-100/25  border border-steel/25 rounded-lg font-[family-name:var(--font-sourceSans3)]
+  }
+  .card-teal{
+    @apply text-center py-10 p-4 bg-teal-100/25  border border-loch/25 rounded-lg font-[family-name:var(--font-sourceSans3)]
+  }
+
+  .card-white{
+    @apply  py-10 p-4 bg-white/75 border border-steel/15 rounded-lg font-[family-name:var(--font-sourceSans3)]
+  }
+
 }
 
 textarea{

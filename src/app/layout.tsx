@@ -31,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${fragmentMono.variable} ${sourceSans3.variable} antialiased w-screen h-screen bg-style1 bg-cover bg-no-repeat bg-center`}
+        className={`${fragmentMono.variable} ${sourceSans3.variable} antialiased w-screen min-h-screen bg-style1 bg-cover bg-no-repeat bg-center`}
       >
       <Navbar></Navbar>
         {children}
