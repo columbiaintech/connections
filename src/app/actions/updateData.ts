@@ -44,7 +44,7 @@ type EventAttendee = {
 export async function fetchColumns() {
     const supabase = await createClient()
     try {
-        const {data:userData, error:userError } = await supabase.rpc('get_user_columns');
+        const {data:userData, error:userError } = await supabase.rpc('get_member_columns');
         if (userError) {
             throw userError;
         }
@@ -91,18 +91,18 @@ async function findExistingUsers(emails: string[]){
     const supabase = await createClient();
     try {
         const {data: existingUsers, error} = await supabase
-            .from('users')
+            .from('members')
             .select('user_id, email')
             .in('email', emails);
         if(error) throw error;
-        return new Map(existingUsers?.map(user=>[user.email, user.user_id])||[]);
+        return new Map(existingUsers?.map(member=>[member.email, member.user_id])||[]);
     } catch(error){
         console.error('Error finding existing users:', error);
         throw error;
     }
 }
 
-async function createMembers(userData: any[]){
+async function createMembers(userData: any[], groupId: string | null = null){
     if (!userData.length) return [];
     const supabase = await createClient();
     try {
@@ -128,16 +128,16 @@ async function createMembers(userData: any[]){
 async function processUsers(userData: any[]){
     const emails = userData.map(user=>user.email);
     const existingUsers = await findExistingUsers(emails);
-    const newUsers = userData.filter(user=>!existingUsers.has(user.email));
+    const newUsers = memberData.filter(member=>!existingUsers.has(member.email));
     const createdUsers = newUsers.length>0 ? await createMembers(newUsers):[];
 
     createdUsers.forEach(user=>existingUsers.set(user.email, user.user_id));
 
     return{
         userMap: existingUsers,
-        processedUsers: userData.map(user=>({
-            ...user,
-            user_id: existingUsers.get(user.email)
+        processedUsers: memberData.map(member=>({
+            ...member,
+            user_id: existingUsers.get(member.email)
         }))
     };
 }
@@ -241,9 +241,9 @@ export async function fetchEventAttendees(eventId: string) {
     }
 }
 
-export async function createAttendee(eventId: string, userData: any){
+export async function createAttendee(eventId: string, memberData: any){
     try{
-        const {processedUsers} = await processUsers([userData.users]);
+        const {processedUsers} = await processMembers([memberData.users]);
         const processedUser = processedUsers[0];
         await createEventAttendees(eventId, [processedUser]);
         const updatedAttendees = await fetchEventAttendees(eventId);
