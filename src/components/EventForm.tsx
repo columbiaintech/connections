@@ -12,6 +12,8 @@ import {useRouter} from "next/navigation";
 
 interface EventFormProps {
     dbColumns: string[];
+    groupId: string | null;
+    groupList: { group_id: string; group_name: string }[];
 }
 
 interface EventData{
@@ -20,13 +22,14 @@ interface EventData{
     mappedData: Record<string, any>[];
 }
 
-function EventForm({dbColumns}: EventFormProps) {
+function EventForm({dbColumns, groupId, groupList}: EventFormProps) {
     const [eventName, setEventName] = useState('');
     const [eventDate, setEventDate] = useState<Date | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [columnMapping, setColumnMapping] = useState<ColumnMap[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+    const [selectedGroupId, setSelectedGroupId] = useState(groupId || '');
     const router = useRouter();
 
     const handleFileUpload = (file: File) => {
@@ -94,7 +97,7 @@ function EventForm({dbColumns}: EventFormProps) {
                 });
             };
             const mappedData = await processFile();
-            const result = await createEvent({eventName, eventDate, mappedData});
+            const result = await createEvent({groupId: selectedGroupId || null, eventName, eventDate, mappedData});
             if (result?.event?.event_id){
                 const eventId = result?.event?.event_id;
                 router.push(`/events/${eventId}`);
@@ -120,9 +123,29 @@ function EventForm({dbColumns}: EventFormProps) {
                         e.target.style.height = '';
                         e.target.style.height = e.target.scrollHeight + 'px';
                     }}
-                          className="ps-2 text-gray-800 w-full font-[family-name:var(--font-sourceSans3)] text-3xl  rounded-sm"
+                          className="ps-2 w-full font-[family-name:var(--font-sourceSans3)] text-3xl rounded-sm border border-steel/15 rounded focus-visible:outline-4 focus-visible:outline-offset-1 focus-visible:outline-steel-100/50 focus-visible:ring-2"
                           placeholder={"Event Name"}
                 />
+                {groupList && groupList.length > 0 && (
+                    <div className="w-full">
+                        <label htmlFor="group-select" className="block text-sm font-medium mb-1">
+                            Group
+                        </label>
+                        <select
+                            id="group-select"
+                            className="w-full border border-steel/15 rounded focus-visible:outline-4 focus-visible:outline-offset-1 focus-visible:outline-steel/15 focus-visible:ring-2 rounded p-2 mb-4"
+                            value={selectedGroupId}
+                            onChange={(e) => setSelectedGroupId(e.target.value)}
+                        >
+                            <option value="">Select a group</option>
+                            {groupList.map((group) => (
+                                <option key={group.group_id} value={group.group_id}>
+                                    {group.group_name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 <DatePicker selected={eventDate} value={eventDate} onChange={handleDateChange}/>
                 <CSVUpload dbColumns={dbColumns} onFileUpload={handleFileUpload} onMappingUpdate={handleMappingUpdate}/>
                 <button
