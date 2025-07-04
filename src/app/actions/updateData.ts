@@ -182,12 +182,45 @@ async function addUsersToGroup(userIds: string[], groupId: string) {
 }
 
 async function processMembers(memberData: any[], groupId: string | null = null){
+    const supabase = await createClient();
     const emails = memberData.map(member=>member.email);
     const existingUsers = await findExistingUsers(emails);
     const newUsers = memberData.filter(member=>!existingUsers.has(member.email));
     const createdUsers = newUsers.length>0 ? await createMembers(newUsers):[];
 
     createdUsers.forEach(member=>existingUsers.set(member.email, member.user_id));
+
+    const allUserIds = Array.from(existingUsers.values());
+
+    const { data: membersPresent, error: fetchMembersError } = await supabase
+        .from('members')
+        .select('user_id')
+        .in('user_id', allUserIds);
+
+    if (fetchMembersError) throw fetchMembersError;
+
+    const existingMemberIds = new Set(membersPresent?.map(m => m.user_id) || []);
+    const usersMissingInMembers = memberData.filter(member => {
+        const userId = existingUsers.get(member.email);
+        return userId && !existingMemberIds.has(userId);
+    });
+
+    if (usersMissingInMembers.length > 0) {
+        const fallbackMembers = usersMissingInMembers.map(member => ({
+            user_id: existingUsers.get(member.email),
+            email: member.email,
+            name: member.name || `${member.first_name || ''} ${member.last_name || ''}`.trim(),
+            group_id: groupId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }));
+
+        const { error: fallbackError } = await supabase
+            .from('members')
+            .insert(fallbackMembers);
+
+        if (fallbackError) throw fallbackError;
+    }
 
     if (groupId) {
         const existingUserIds = Array.from(existingUsers.values());
@@ -525,8 +558,8 @@ export async function fetchUserGroupDetails(groupId: string) {
         if (eventsError) throw eventsError;
 
         const { data: members, error: membersError } = await supabase
-            .from('user_groups')
-            .select('user_id, users(*)')
+            .from('members')
+            .select('*')
             .eq('group_id', groupId);
 
         if (membersError) throw membersError;
@@ -537,17 +570,28 @@ export async function fetchUserGroupDetails(groupId: string) {
         if (eventIds.length > 0) {
             const { data: attendeesData, error: attendeesError } = await supabase
                 .from('event_attendees')
-                .select('*, users(*)')
+                .select('*, members(*)')
                 .in('event_id', eventIds);
 
             if (attendeesError) throw attendeesError;
             attendees = attendeesData;
         }
 
+        const uniqueMembersMap = new Map<string, any>();
+        attendees.forEach(attendee => {
+            const member = attendee.members;
+            if (member && member.email && !uniqueMembersMap.has(member.email)) {
+                uniqueMembersMap.set(member.email, member);
+            }
+        });
+
+        const uniqueMembers = Array.from(uniqueMembersMap.values());
+
+
         return {
             group: groupData,
             events,
-            members: members.map(m => m.users),
+            members: uniqueMembers,
             attendees
         };
     } catch (error) {
@@ -576,6 +620,16 @@ export async function createGroupWithInvites(groupName: string, invites: Array<{
             .single();
 
         if (groupError) throw groupError;
+
+
+        await supabase.from('members').upsert({
+            user_id: user.id,
+            email: user.email,
+            name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+            group_id: groupId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        });
 
         const { error: ownerError } = await supabase
             .from('user_groups')
