@@ -3,7 +3,8 @@
 // TODO: update the table to display user names instead of IDs, add Send Email button for each row
 
 import React, { useState, useEffect } from 'react';
-import {fetchEventConnections, generateRandomConnections} from "@/app/actions/updateData";
+import {fetchEventAttendees, fetchEventConnections, generateRandomConnections} from "@/app/actions/updateData";
+import EmailThreadButton from "@/components/EmailThreadButton";
 
 interface ConnectionsTableProps {
     eventId: string;
@@ -22,11 +23,12 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         const loadConnections = async () => {
             setLoading(true);
             try {
-                const data = await fetchEventConnections(eventId);
-                setConnections(data);
-                const introAttendees = data.filter(attendee => attendee.wants_intro);
+                const attendeesData = await fetchEventAttendees(eventId);
+                const introAttendees = attendeesData.filter(attendee => attendee.wants_intro);
                 setAttendees(introAttendees);
-                setSelectedAttendees(introAttendees.map(a => a.users.user_id));
+                setSelectedAttendees(introAttendees.map(a => a.members.user_id));
+                const connectionsData = await fetchEventConnections(eventId);
+                setConnections(connectionsData);
             } catch (error) {
                 console.error("Error fetching connections:", error);
             } finally {
@@ -67,7 +69,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         if (selectedAttendees.length === attendees.length) {
             setSelectedAttendees([]);
         } else {
-            setSelectedAttendees(attendees.map(a => a.users.user_id));
+            setSelectedAttendees(attendees.map(a => a.members.user_id));
         }
     };
 
@@ -76,7 +78,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
     };
 
     const getStatusBadgeClass = (status: string) => {
-        switch (status.toLowerCase()) {
+        switch (status) {
             case 'pending':
                 return 'bg-yellow-100 text-yellow-800';
             case 'connected':
@@ -117,9 +119,18 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                                     </td>
                                     <td className="px-4 py-2 whitespace-nowrap">{connection.user1_id}</td>
                                     <td className="px-4 py-2 whitespace-nowrap">{connection.user2_id}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap">
+                                        <EmailThreadButton connectionId={connection.connection_id} />
+                                    </td>
+
                                 </tr>
                             ))}
-                            </tbody>
+                            <tr>
+
+
+                            </tr>
+
+                        </tbody>
                         </table>
                     </div>
                 ) : (
@@ -164,7 +175,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                                         className="form-checkbox h-5 w-5 text-sea-600"
                                     />
                                 </th>
-                                {Object.keys(attendees[0].users)
+                                {Object.keys(attendees[0].members)
                                     .filter(key => !['user_id', 'created_at', 'updated_at'].includes(key))
                                     .map(field => (
                                         <th
@@ -182,28 +193,28 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                             {attendees.map(attendee => (
-                                <tr key={attendee.users.user_id}>
+                                <tr key={attendee.members.user_id}>
                                     <td className="px-4 py-2">
                                         <input
                                             type="checkbox"
-                                            checked={selectedAttendees.includes(attendee.users.user_id)}
-                                            onChange={() => handleAttendeeSelection(attendee.users.user_id)}
+                                            checked={selectedAttendees.includes(attendee.members.user_id)}
+                                            onChange={() => handleAttendeeSelection(attendee.members.user_id)}
                                             className="form-checkbox h-5 w-5 text-sea-600"
                                         />
                                     </td>
-                                    {Object.keys(attendee.users)
+                                    {Object.keys(attendee.members)
                                         .filter(key => !['user_id', 'created_at', 'updated_at'].includes(key))
                                         .map(field => (
                                             <td
                                                 key={field}
                                                 className="px-4 py-2 whitespace-nowrap"
                                             >
-                                                {attendee.users[field] || 'N/A'}
+                                                {attendee.members[field] || 'N/A'}
                                             </td>
                                         ))
                                     }
                                     <td className="px-4 py-2 whitespace-nowrap">
-                                        {attendee.users.user_id}
+                                        {attendee.members.user_id}
                                     </td>
                                 </tr>
                             ))}
