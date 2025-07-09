@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { fetchUserGroupDetails } from "@/app/actions/updateData";
 import AttendeesTable from "@/components/AttendeesTable";
+import Link from "next/link";
+import Viz from "@/components/Viz";
 
 
 export default function GroupInfo({ groupData}:{groupData: any}) {
@@ -11,9 +13,9 @@ export default function GroupInfo({ groupData}:{groupData: any}) {
     };
 
     return (
-        <div className="space-y-10 card-white">
+        <div className="space-y-6">
             <header>
-                <h1 className="ps-2 text-loch w-full font-[family-name:var(--font-sourceSans3)] text-3xl  rounded-sm">Your {group.group_name} Organization</h1>
+                <h1 className="text-loch w-full font-[family-name:var(--font-sourceSans3)] text-3xl  rounded-sm"> {group.group_name} </h1>
             </header>
 
             <section>
@@ -23,35 +25,48 @@ export default function GroupInfo({ groupData}:{groupData: any}) {
                         <p className="text-lg text-berry">No events found for this organization.</p>
                         <p className="text-sm text-steel">Create an event to invite members and start connecting.</p>
                         <div className="mt-4">
-                            <a href="/dashboard/create-event" className="btn-primary">Create Event</a>
+                            <Link href={`/events/new?group=${group.group_id}`} className="btn-primary">
+                                Create Event
+                            </Link>
                         </div>
                     </div>
                 ) : (
+
                     <div className="space-y-4">
+                        <div className="mt-4">
+                            <Link href={`/events/new?group=${group.group_id}`} className="btn-primary">
+                                Create Event
+                            </Link>
+                        </div>
+
                         {events.map((event: any) => (
-                            <div key={event.event_id} className="border p-4 rounded">
+                            <div key={event.event_id} className="border p-4 rounded card-teal">
+                                <Link
+                                    key={event.event_id}
+                                    href={`/events/${event.event_id}`}
+                                    className="block p-6 rounded-lg no-underline"
+                                >
                                 <h4 className="text-lg font-semibold">{event.event_name}</h4>
                                 <p className="text-sm text-gray-600">{event.event_date}</p>
-                                <AttendeesTable
-                                    eventAttendees={getAttendeesForEvent(event.event_id)}
-                                    eventId={event.event_id}
-                                />
+                                </Link>
+
                             </div>
                         ))}
+
+                        <h3 className="text-xl font-semibold mb-2">Members</h3>
+                        <ul className="list-disc ml-6 space-y-1">
+                            {members.map((member: any) => (
+                                <li key={member.user_id}>
+                                    {member.email} – {member.role || "member"}
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 )}
             </section>
+            <Viz groupData={groupData} />
 
-            <section>
-                <h3 className="text-xl font-semibold mb-2">Members</h3>
-                <ul className="list-disc ml-6 space-y-1">
-                    {members.map((member: any) => (
-                        <li key={member.user_id}>
-                            {member.email} – {member.role || "member"}
-                        </li>
-                    ))}
-                </ul>
-            </section>
+
         </div>
     );
 }
