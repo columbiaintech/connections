@@ -110,7 +110,7 @@ textarea::-webkit-scrollbar{
   }
 
   .card-white{
-    @apply  py-10 p-4 bg-white/75 border border-steel/15 rounded-lg font-[family-name:var(--font-sourceSans3)]
+    @apply  py-4 p-4 bg-white/75 border border-steel/15 rounded-lg font-[family-name:var(--font-sourceSans3)]
   }
 
 }
