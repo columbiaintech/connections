@@ -557,14 +557,21 @@ export async function fetchUserGroupDetails(groupId: string) {
 
         if (eventsError) throw eventsError;
 
+        const eventIds = events.map(e => e.event_id);
+
+        const { data: connections, error: connectionsError } = await supabase
+            .from('connections')
+            .select('*')
+            .in('event_id', eventIds);
+
+        if (connectionsError) throw connectionsError;
+
         const { data: members, error: membersError } = await supabase
             .from('members')
             .select('*')
             .eq('group_id', groupId);
 
         if (membersError) throw membersError;
-
-        const eventIds = events.map(e => e.event_id);
 
         let attendees = [];
         if (eventIds.length > 0) {
@@ -592,7 +599,8 @@ export async function fetchUserGroupDetails(groupId: string) {
             group: groupData,
             events,
             members: uniqueMembers,
-            attendees
+            attendees,
+            connections
         };
     } catch (error) {
         console.error('Error fetching user group details:', error);
