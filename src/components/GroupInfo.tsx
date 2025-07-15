@@ -5,12 +5,22 @@ import AttendeesTable from "@/components/AttendeesTable";
 import Link from "next/link";
 import Viz from "@/components/Viz";
 
-
 export default function GroupInfo({ groupData}:{groupData: any}) {
     const { group, events, members, attendees } = groupData;
-    const getAttendeesForEvent = (eventId: string) => {
-        return attendees.filter((a: any) => a.event_id === eventId);
-    };
+
+    const eventStats = events.map((event: any) => {
+        const eventAttendees = attendees.filter((a: any) => a.event_id === event.event_id);
+        const total = eventAttendees.length;
+        const eligible = eventAttendees.filter((a: any) => a.wants_intro).length;
+        const connected = eventAttendees.filter((a: any) => a.connected).length;
+
+        return {
+            ...event,
+            totalAttendees: total,
+            totalEligibleForConnection: eligible,
+            totalConnected: connected,
+        };
+    });
 
     return (
         <div className="space-y-6">
@@ -39,7 +49,7 @@ export default function GroupInfo({ groupData}:{groupData: any}) {
                             </Link>
                         </div>
 
-                        {events.map((event: any) => (
+                        {eventStats.map((event: any) => (
                             <div key={event.event_id} className="border p-4 rounded card-teal">
                                 <Link
                                     key={event.event_id}
@@ -48,6 +58,9 @@ export default function GroupInfo({ groupData}:{groupData: any}) {
                                 >
                                 <h4 className="text-lg font-semibold">{event.event_name}</h4>
                                 <p className="text-sm text-gray-600">{event.event_date}</p>
+                                    <p>Number of attendees: {event.totalAttendees}</p>
+                                    <p>Eligible for connection: {event.totalEligibleForConnection}</p>
+                                    <p>Connected attendees: {event.totalConnected}</p>
                                 </Link>
 
                             </div>
