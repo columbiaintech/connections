@@ -1,47 +1,24 @@
-"use client"
+"use server"
+import { createClient } from '../../utils/supabase/server'
 import {fetchAllUserGroups, fetchUserGroupDetails} from "@/app/actions/updateData";
-import {useEffect, useState} from "react";
 import Link from "next/link";
 import GroupInfo from "@/components/GroupInfo";
+import {redirect} from "next/navigation";
 
-export default function DashboardDisplay({user}){
-    const [loading, setLoading] = useState(true);
-    const [groupData, setGroupData] = useState(null);
-    const [groupList, setGroupList] = useState<any[]>([]);
-    const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+export default async function DashboardDisplay({searchParams}){
+    const supabase = await createClient()
 
-    useEffect(() => {
-        async function loadGroups() {
-            try {
-                const data = await fetchAllUserGroups(user.id);
-                setGroupList(data);
-                if (data.length>0){
-                    setSelectedGroupId(data[0].group_id)
-                }
-            } finally {
-                setLoading(false);
-            }
-        }
-        loadGroups();
-    }, [user.id]);
+    const { data:userData, error } = await supabase.auth.getUser()
+    if (error || !userData?.user) {
+        redirect('/signin')
+    }
 
-    useEffect(() => {
-        async function loadGroupData() {
-            if (!selectedGroupId) return;
-            setLoading(true);
-            try {
-                const data = await fetchUserGroupDetails(selectedGroupId);
-                setGroupData(data);
-            } finally {
-                setLoading(false);
-            }
-        }
-        loadGroupData();
-    }, [selectedGroupId]);
+    const user = userData.user;
+    const groupList = await fetchAllUserGroups(user.id);
 
-    if (loading) return <p>Loading...</p>;
 
-    if (!groupData?.group) {
+
+    if (groupList.length===0) {
         return (
             <div className="card-pink p-6">
                 <p className="text-lg text-berry">You don’t have an organization yet.</p>
@@ -53,23 +30,31 @@ export default function DashboardDisplay({user}){
         );
     }
 
+    const selectedGroupId = searchParams.group || groupList[0].group_id;
+    const hasAccessToGroup = groupList.some(group => group.group_id === selectedGroupId);
+    const finalGroupId = hasAccessToGroup ? selectedGroupId : groupList[0].group_id;
+    if (!hasAccessToGroup && searchParams.group) {
+        redirect(`/dashboard?group=${groupList[0].group_id}`);
+    }
+    const groupData = await fetchUserGroupDetails(finalGroupId);
+
     return (
 
         <div className=" card-white">
 
             <nav className="flex -mb-px gap-6 font-[family-name:var(--font-fragment-mono)]">
                 {groupList.map((group) => (
-                    <button
+                    <Link
                         key={group.group_id}
-                        onClick={() => setSelectedGroupId(group.group_id)}
+                        href={`/dashboard?group=${group.group_id}`}
                         className={`text-sm text-base border-b-2 ${
-                            selectedGroupId === group.group_id
+                            finalGroupId === group.group_id
                                 ? 'border-rose-600 text-gray-700'
                                 : 'border-transparent text-gray-500 hover:text-gray-400'
                         }`}
                     >
                         {group.group_name}
-                    </button>
+                    </Link>
                 ))}
                 <Link
                     href="/dashboard/new"
