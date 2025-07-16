@@ -491,14 +491,14 @@ export async function fetchEventConnections(eventId: string) {
     const supabase = await createClient();
     try {
         const { data, error } = await supabase
-            .from('connections')
+            .from('enriched_connections')
             .select(`*`)
             .eq('event_id', eventId);
 
         if (error) throw error;
         return data || [];
     } catch (error) {
-        console.error('Error fetching connections:', error);
+        console.error('Error fetching enriched connections:', error);
         return [];
     }
 }
@@ -559,8 +559,8 @@ export async function fetchUserGroupDetails(groupId: string) {
 
         const eventIds = events.map(e => e.event_id);
 
-        const { data: connections, error: connectionsError } = await supabase
-            .from('connections')
+        const { data: enriched_connections, error: connectionsError } = await supabase
+            .from('enriched_connections')
             .select('*')
             .in('event_id', eventIds);
 
@@ -600,7 +600,7 @@ export async function fetchUserGroupDetails(groupId: string) {
             events,
             members: uniqueMembers,
             attendees,
-            connections
+            connections: enriched_connections
         };
     } catch (error) {
         console.error('Error fetching user group details:', error);
@@ -722,4 +722,16 @@ export async function acceptGroupInvitation(groupId: string, role: string) {
         console.error('Error accepting invitation:', error);
         throw error;
     }
+}
+
+export async function fetchConnectionThread(connectionId: string) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('connection_threads')
+        .select('*')
+        .eq('connection_id', connectionId)
+        .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return data;
 }
