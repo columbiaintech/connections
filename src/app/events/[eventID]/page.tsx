@@ -1,13 +1,9 @@
 "use server";
-import Image from "next/image";
 import {fetchEventDetails} from "@/app/actions/updateData";
 import {fetchEventAttendees} from "@/app/actions/updateData";
-import EventDisplay from "@/components/EventDisplay";
-// import EventDetails from "@/components/EventDetails";
 import AttendeesTable from "@/components/AttendeesTable";
 import ConnectionsTable from "@/components/ConnectionsTable";
 import TabNavigator from "@/components/TabNavigator";
-import Navbar from "@/components/Navbar";
 
 type EventPageProps = {
     params: {
@@ -39,22 +35,10 @@ export default async function Home({params}:EventPageProps) {
                 <main className="w-full flex flex-col gap-8 row-start-2 items-center sm:items-start">
                     <div
                         className="w-full bg-style2 bg-cover bg-no-repeat bg-center list-inside text-sm text-center sm:text-left shadow-sm sm:rounded-lg">
-                        <EventDisplay eventDetails={eventDetails} eventAttendees={eventAttendees} />
-
                         <TabNavigator tabs={[
                             {id: 'attendees', label:'Attendees', content: <AttendeesTable eventAttendees={eventAttendees} eventId={eventId}/>},
                             {id: 'connections', label:'Connections', content: <ConnectionsTable eventAttendees={eventAttendees} eventId={eventId}/>}
                             ]}/>
-                        {/*<div className="rounded-sm text-gray-800 px-6 py-6 flex flex-col gap-4 items-start max-w-full">*/}
-                        {/*<AttendeesTable eventAttendees={eventAttendees} eventId={eventId}/>*/}
-                        {/*</div>*/}
-
-                        {/*    TODO:
-                    show event details and display registered users (fetch from db)
-                    components: generate-pairs.tsx, send-email.tsx
-                */}
-
-
                     </div>
                 </main>
             </div>
