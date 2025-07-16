@@ -1,10 +1,8 @@
 "use client";
-
-// TODO: update the table to display user names instead of IDs, add Send Email button for each row
-
 import React, { useState, useEffect } from 'react';
-import {fetchEventAttendees, fetchEventConnections, generateRandomConnections} from "@/app/actions/updateData";
+import {fetchConnectionThread, fetchEventAttendees, fetchEventConnections, generateRandomConnections} from "@/app/actions/updateData";
 import EmailThreadButton from "@/components/EmailThreadButton";
+import ThreadView from "@/components/ThreadView";
 
 interface ConnectionsTableProps {
     eventId: string;
@@ -14,8 +12,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
     const [connections, setConnections] = useState([]);
     const [attendees, setAttendees] = useState([]);
     const [selectedAttendees, setSelectedAttendees] = useState([]);
-
-    const [wants_intro, setWantsIntro] = useState(false);
+    const [expandedThreads, setExpandedThreads] = useState<{ [key: string]: any }>({});
     const [loading, setLoading] = useState(true);
     const [generatingConnections, setGeneratingConnections] = useState(false);
 
@@ -72,11 +69,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
             setSelectedAttendees(attendees.map(a => a.members.user_id));
         }
     };
-
-
-    const handleSendEmails = async () => {
-    };
-
+    
     const getStatusBadgeClass = (status: string) => {
         switch (status) {
             case 'pending':
@@ -90,6 +83,27 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         }
     };
 
+    const toggleThread = async (connectionId) => {
+        setExpandedThreads((prev) => {
+            const isOpen = prev[connectionId]?.open
+            return {
+                ...prev,
+                [connectionId]: {
+                    open: !isOpen,
+                    messages: isOpen ? prev[connectionId]?.messages : null,
+                    loading: !isOpen && !prev[connectionId]?.messages,
+                },
+            }
+        })
+
+        if (!expandedThreads[connectionId]?.messages && !expandedThreads[connectionId]?.open) {
+            const messages = await fetchConnectionThread(connectionId)
+            setExpandedThreads((prev) => ({
+                ...prev,
+                [connectionId]: { open: true, messages, loading: false },
+            }))
+        }
+    }
 
     return (
         <div className="w-full h-full container mx-auto p-4">
@@ -106,30 +120,43 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User 1 ID</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User 2 ID</th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thread</th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                             {connections.map(connection => (
-                                <tr key={connection.connection_id}>
+                                <React.Fragment key={connection.connection_id}>
+                                    <tr>
                                     <td className="px-4 py-2 whitespace-nowrap">{connection.connection_id}</td>
                                     <td className="px-4 py-2 whitespace-nowrap">
                                             <span className={`px-2 py-1 rounded ${getStatusBadgeClass(connection.status)}`}>
                                                 {connection.status}
                                             </span>
                                     </td>
-                                    <td className="px-4 py-2 whitespace-nowrap">{connection.user1_id}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap">{connection.user2_id}</td>
+                                    <td className="px-4 py-2">{connection.user1_name}</td>
+                                    <td className="px-4 py-2">{connection.user2_name}</td>
+                                    <td className="px-4 py-2">{connection.latest_subject || 'No email sent'}</td>
                                     <td className="px-4 py-2 whitespace-nowrap">
-                                        <EmailThreadButton connectionId={connection.connection_id} />
+                                        <div className="px-4 py-2 whitespace-nowrap">
+                                        {/*<button onClick={()=>toggleThread(connection.connection_id)} className="text-sm text-blue-600 underline">*/}
+                                        {/*    {expandedThreads[connection.connection_id]?.open ? 'Hide' : 'Show'} Thread*/}
+                                        {/*</button>*/}
+                                        </div>
+                                        {connection.latest_subject ? null : (
+                                            <EmailThreadButton connectionId={connection.connection_id} />
+                                        )}
                                     </td>
-
                                 </tr>
-                            ))}
-                            <tr>
-
-
-                            </tr>
-
+                            {expandedThreads[connection.connection_id]?.open && (
+                                <tr className="bg-gray-50">
+                                <td colSpan={7} className="px-6 py-4">
+                                <ThreadView connectionId={connection.connection_id} />
+                                </td>
+                                </tr>
+                                )}
+                                </React.Fragment>
+                                ))}
                         </tbody>
                         </table>
                     </div>
@@ -143,7 +170,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
             <div>
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-semibold font-[family-name:var(--font-sourceSans3)]">Attendees Eligible for Connections</h2>
-                    <div className="space-x-3 font-[family-name:var(--font-fragment-mono)]">
+                    <div className="space-x-3">
                         <button
                             onClick={handleGenerateConnections}
                             disabled={generatingConnections || selectedAttendees.length === 0}
