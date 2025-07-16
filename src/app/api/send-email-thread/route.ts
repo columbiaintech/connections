@@ -29,7 +29,7 @@ export async function POST(req: Request) {
         <p>Hi ${user1.name} & ${user2.name},</p>
         <p>We're excited to introduce you both through this thread!</p>
         <p>Feel free to reply-all and connect directly.</p>
-        <p>– Your Team</p>
+        <p>– Your Columbia in Tech Team</p>
     `;
 
     try {
@@ -37,7 +37,12 @@ export async function POST(req: Request) {
             from: 'Maya <team@updates.mayasundar.com>',
             to: [user1.email, user2.email],
             subject,
-            html
+            html,
+            headers:{
+                'Message-ID': `<${connectionId}@updates.mayasundar.com>`,
+                'References': `<${connectionId}@updates.mayasundar.com>`,
+                'In-Reply-To': `<${connectionId}@updates.mayasundar.com>`
+            }
         });
 
         return NextResponse.json({ success: true });
