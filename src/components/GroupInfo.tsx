@@ -6,7 +6,7 @@ import Link from "next/link";
 import Viz from "@/components/Viz";
 
 export default function GroupInfo({ groupData}:{groupData: any}) {
-    const { group, events, members, attendees } = groupData;
+    const { group, events, members, attendees, connections } = groupData;
 
     const eventStats = events.map((event: any) => {
         const eventAttendees = attendees.filter((a: any) => a.event_id === event.event_id);
@@ -25,7 +25,7 @@ export default function GroupInfo({ groupData}:{groupData: any}) {
     return (
         <div className="space-y-6">
             <header>
-                <h1 className="text-loch w-full font-[family-name:var(--font-sourceSans3)] text-3xl  rounded-sm"> {group.group_name} </h1>
+                <h1 className="w-full font-[family-name:var(--font-sourceSans3)] text-3xl  rounded-sm"> {group.group_name} </h1>
             </header>
 
             <section>
@@ -50,30 +50,36 @@ export default function GroupInfo({ groupData}:{groupData: any}) {
                         </div>
 
                         {eventStats.map((event: any) => (
-                            <div key={event.event_id} className="border p-4 rounded card-teal">
+                            <div key={event.event_id} className="border rounded card-teal ">
                                 <Link
                                     key={event.event_id}
                                     href={`/events/${event.event_id}`}
-                                    className="block p-6 rounded-lg no-underline"
+                                    className="flex justify-between items-start rounded-lg no-underline gap-4"
                                 >
-                                <h4 className="text-lg font-semibold">{event.event_name}</h4>
-                                <p className="text-sm text-gray-600">{event.event_date}</p>
-                                    <p>Number of attendees: {event.totalAttendees}</p>
-                                    <p>Eligible for connection: {event.totalEligibleForConnection}</p>
-                                    <p>Connected attendees: {event.totalConnected}</p>
+                                    <div className="flex-1 gap-6 text-center">
+                                        <p className="text-xm">{event.event_date}</p>
+                                        <h4 className="text-2xl font-semibold">{event.event_name}</h4>
+                                    </div>
+
+                                    <div className="flex gap-6 text-center">
+                                        <div>
+                                            <p className="text-sm">Attendees</p>
+                                            <p className="text-2xl font-semibold text-loch">{event.totalAttendees}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm">Want Connection</p>
+                                            <p className="text-2xl font-semibold text-loch">{event.totalEligibleForConnection}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm">Connected</p>
+                                            <p className="text-2xl font-semibold text-loch">{event.totalConnected}</p>
+                                        </div>
+                                    </div>
+
                                 </Link>
 
                             </div>
                         ))}
-
-                        <h3 className="text-xl font-semibold mb-2">Members</h3>
-                        <ul className="list-disc ml-6 space-y-1">
-                            {members.map((member: any) => (
-                                <li key={member.user_id}>
-                                    {member.email} – {member.role || "member"}
-                                </li>
-                            ))}
-                        </ul>
                     </div>
                 )}
             </section>
