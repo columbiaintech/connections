@@ -1,12 +1,20 @@
+"use server"
 import Logo from "./Logo";
 import React from "react";
 import Link from "next/link";
 import {logout} from "@/app/actions/auth";
+import {createClient} from "@utils/supabase/server";
+import {redirect} from "next/navigation";
 
 
-export default function Navbar() {
+export default async function Navbar() {
+    const supabase = await createClient()
+
+    const { data:userData, error } = await supabase.auth.getUser()
+    const user = userData.user;
+    const isLoggedIn = !!user
+
     return (
-
         <div className="px-4">
         <div className=" px-4 sm:px-0 mx-auto text-base pt-4 w-full">
         <div className="flex items-center gap-2 justify-between">
@@ -21,26 +29,30 @@ export default function Navbar() {
 
 
             <div className="flex items-center gap-5 text-sm">
-                <form>
-                    <button
-                        type="submit"
-                        formAction={logout}
-                        className="btn-secondary"
-                    >
-                        Sign Out
-                    </button>
-                </form>
+                {!isLoggedIn  ?(
+                    <>
+                    <Link href="/signin"
+                          type="submit"
+                          className="btn-primary">
+                        {'Log In'}
+                    </Link>
+                    <Link href="/signup" className="nav-link">Sign Up</Link>
+                        </>
+                        ) : (
+                            <>
+                            <Link href="/dashboard" className="nav-link">Dashboard</Link>
+                            <form>
+                                <button
+                                    type="submit"
+                                    formAction={logout}
+                                    className="btn-secondary"
+                                >
+                                    Sign Out
+                                </button>
+                            </form>
+                            </>
 
-                <Link href="/signin"
-                    type="submit"
-                    className="btn-primary">
-                    {'Log In'}
-                </Link>
-                <Link href="/signup" className="nav-link">Sign Up</Link>
-                <Link href="/dashboard" className="nav-link">Dashboard</Link>
-                <Link href="/" className="nav-link">Home</Link>
-                <Link href="/events/30a2d8c2-ca72-464d-a79b-8347479d3440" className="nav-link">Event</Link>
-
+                )}
             </div>
         </div>
         </div>
