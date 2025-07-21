@@ -4,14 +4,16 @@ import React from "react";
 import Link from "next/link";
 import {logout} from "@/app/actions/auth";
 import {createClient} from "@utils/supabase/server";
-import {redirect} from "next/navigation";
 
 
 export default async function Navbar() {
     const supabase = await createClient()
 
     const { data:userData, error } = await supabase.auth.getUser()
-    const user = userData.user;
+    if (error) {
+        console.error('Navbar auth error:', error)
+    }
+    const user = userData?.user;
     const isLoggedIn = !!user
 
     return (
@@ -32,7 +34,6 @@ export default async function Navbar() {
                 {!isLoggedIn  ?(
                     <>
                     <Link href="/signin"
-                          type="submit"
                           className="btn-primary">
                         {'Log In'}
                     </Link>

@@ -1,7 +1,4 @@
-import {fetchColumns} from "@/app/actions/updateData";
-import Navbar from "@/components/Navbar";
 import SignUpForm from "@/components/SignUpForm";
-
 
 export default async function SignUp() {
     return (

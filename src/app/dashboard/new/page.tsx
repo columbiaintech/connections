@@ -1,6 +1,4 @@
 "use server";
-import Image from "next/image";
-import Navbar from "@/components/Navbar";
 import NewGroupForm from "@/components/NewGroupForm";
 
 export default async function New() {

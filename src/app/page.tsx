@@ -1,8 +1,5 @@
 "use server";
-
-import EventForm from "../components/EventForm";
 import {fetchColumns} from "@/app/actions/updateData";
-import Navbar from "../components/Navbar"
 
 export default async function Home() {
     const dbColumns = await fetchColumns();
@@ -13,7 +10,7 @@ export default async function Home() {
                   <main className="flex flex-col items-center sm:items-start">
                       <div
                   className=" bg-style2 bg-cover bg-no-repeat bg-center list-inside text-sm sm:text-left shadow-sm sm:rounded-lg">
-                          <EventForm dbColumns={dbColumns}/>
+                          {/*<EventForm dbColumns={dbColumns}/>*/}
                       </div>
                   </main>
               </div>

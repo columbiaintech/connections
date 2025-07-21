@@ -1,7 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { fetchUserGroupDetails } from "@/app/actions/updateData";
-import AttendeesTable from "@/components/AttendeesTable";
+import React from "react";
 import Link from "next/link";
 import Viz from "@/components/Viz";
 
