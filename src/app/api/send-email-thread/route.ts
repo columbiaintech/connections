@@ -3,8 +3,19 @@ import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+interface UserInfo {
+    email: string | null;
+    name: string | null;
+}
+
+interface ConnectionData {
+    connection_id: string;
+    user1: UserInfo[];
+    user2: UserInfo[];
+}
+
 export async function POST(req: Request) {
-    const { connectionId } = await req.json();
+    const { connectionId }: {connectionId: string} = await req.json();
 
     const supabase = await createClient();
 
@@ -22,7 +33,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Connection not found' }, { status: 404 });
     }
 
-    const { user1, user2 } = connectionData;
+    const user1 = Array.isArray(connectionData.user1) ? connectionData.user1[0] : null;
+    const user2 = Array.isArray(connectionData.user2) ? connectionData.user2[0] : null;
+
+    if (!user1?.email || !user2?.email) {
+        return NextResponse.json({ error: 'User emails not found' }, { status: 500 });
+    }
 
     const subject = `👋 You're connected!`;
     const html = `
