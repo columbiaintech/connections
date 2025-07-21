@@ -5,7 +5,7 @@ import Link from "next/link";
 import GroupInfo from "@/components/GroupInfo";
 import {redirect} from "next/navigation";
 
-export default async function DashboardDisplay({searchParams}){
+export default async function DashboardDisplay({searchParams}:{ searchParams: any }){
     const supabase = await createClient()
 
     const { data:userData, error } = await supabase.auth.getUser()

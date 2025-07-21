@@ -4,7 +4,8 @@ import {fetchAllUserGroups, fetchColumns} from "@/app/actions/updateData";
 import {createClient} from "@utils/supabase/server";
 import {redirect} from "next/navigation";
 
-export default async function NewEvent({ searchParams }: { searchParams: { group?: string } }) {
+export default async function NewEvent({ searchParams }: { searchParams: Promise<{ group?: string }> }) {
+    const resolvedSearchParams = await searchParams;
     const supabase = await createClient()
 
     const { data:userData, error } = await supabase.auth.getUser()
@@ -14,7 +15,7 @@ export default async function NewEvent({ searchParams }: { searchParams: { group
 
     const user = userData.user;
 
-    const groupId = searchParams.group || null;
+    const groupId = resolvedSearchParams.group || null;
     const [dbColumns, groupList] = await Promise.all([
         fetchColumns(),
         fetchAllUserGroups(user.id)

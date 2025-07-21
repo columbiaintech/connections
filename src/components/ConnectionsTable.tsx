@@ -3,15 +3,21 @@ import React, { useState, useEffect } from 'react';
 import {fetchConnectionThread, fetchEventAttendees, fetchEventConnections, generateRandomConnections} from "@/app/actions/updateData";
 import EmailThreadButton from "@/components/EmailThreadButton";
 import ThreadView from "@/components/ThreadView";
+import type { Tables } from "@/types/supabase";
+
+type EventAttendee = Tables<'event_attendees'>;
+type Connection = Tables<'connections'>;
+type EnrichedConnection = Tables<'enriched_connections'>;
+type ConnectionThread = Tables<'connection_threads'>;
 
 interface ConnectionsTableProps {
     eventId: string;
 }
 
 export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
-    const [connections, setConnections] = useState([]);
-    const [attendees, setAttendees] = useState([]);
-    const [selectedAttendees, setSelectedAttendees] = useState([]);
+    const [connections, setConnections] = useState<EnrichedConnection[]>([]);
+    const [attendees, setAttendees] = useState<EventAttendee[]>([]);
+    const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
     const [expandedThreads, setExpandedThreads] = useState<{ [key: string]: any }>({});
     const [loading, setLoading] = useState(true);
     const [generatingConnections, setGeneratingConnections] = useState(false);
@@ -20,11 +26,11 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         const loadConnections = async () => {
             setLoading(true);
             try {
-                const attendeesData = await fetchEventAttendees(eventId);
+                const attendeesData = await fetchEventAttendees(eventId) as EventAttendee[];
                 const introAttendees = attendeesData.filter(attendee => attendee.wants_intro);
                 setAttendees(introAttendees);
-                setSelectedAttendees(introAttendees.map(a => a.members.user_id));
-                const connectionsData = await fetchEventConnections(eventId);
+                setSelectedAttendees(introAttendees.map(a => a.user_id));
+                const connectionsData = await fetchEventConnections(eventId) as EnrichedConnection[];
                 setConnections(connectionsData);
             } catch (error) {
                 console.error("Error fetching connections:", error);
@@ -41,7 +47,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         try {
             const result = await generateRandomConnections(eventId);
             if (result.success) {
-                const data = await fetchEventConnections(eventId);
+                const data = await fetchEventConnections(eventId) as EnrichedConnection[];
                 setConnections(data);
             } else {
                 alert(result.message);
@@ -66,11 +72,11 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         if (selectedAttendees.length === attendees.length) {
             setSelectedAttendees([]);
         } else {
-            setSelectedAttendees(attendees.map(a => a.members.user_id));
+            setSelectedAttendees(attendees.map(a => a.user_id));
         }
     };
     
-    const getStatusBadgeClass = (status: string) => {
+    const getStatusBadgeClass = (status: string | null): string => {
         switch (status) {
             case 'pending':
                 return 'bg-yellow-100 text-yellow-800';
@@ -83,7 +89,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         }
     };
 
-    const toggleThread = async (connectionId) => {
+    const toggleThread = async (connectionId: string) => {
         setExpandedThreads((prev) => {
             const isOpen = prev[connectionId]?.open
             return {
@@ -143,15 +149,17 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                                         {/*    {expandedThreads[connection.connection_id]?.open ? 'Hide' : 'Show'} Thread*/}
                                         {/*</button>*/}
                                         </div>
-                                        {connection.latest_subject ? null : (
+                                        {connection.connection_id && (
                                             <EmailThreadButton connectionId={connection.connection_id} />
                                         )}
                                     </td>
                                 </tr>
-                            {expandedThreads[connection.connection_id]?.open && (
+                            {expandedThreads[connection.connection_id!]?.open && (
                                 <tr className="bg-gray-50">
                                 <td colSpan={7} className="px-6 py-4">
-                                <ThreadView connectionId={connection.connection_id} />
+                                    {connection.connection_id && (
+                                        <ThreadView connectionId={connection.connection_id} />
+                                    )}
                                 </td>
                                 </tr>
                                 )}
@@ -202,7 +210,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                                         className="form-checkbox h-5 w-5 text-sea-600"
                                     />
                                 </th>
-                                {Object.keys(attendees[0].members)
+                                {attendees.length > 0 && Object.keys(attendees[0])
                                     .filter(key => !['user_id', 'created_at', 'updated_at'].includes(key))
                                     .map(field => (
                                         <th
@@ -220,28 +228,28 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                             {attendees.map(attendee => (
-                                <tr key={attendee.members.user_id}>
+                                <tr key={attendee.user_id}>
                                     <td className="px-4 py-2">
                                         <input
                                             type="checkbox"
-                                            checked={selectedAttendees.includes(attendee.members.user_id)}
-                                            onChange={() => handleAttendeeSelection(attendee.members.user_id)}
+                                            checked={selectedAttendees.includes(attendee.user_id)}
+                                            onChange={() => handleAttendeeSelection(attendee.user_id)}
                                             className="form-checkbox h-5 w-5 text-sea-600"
                                         />
                                     </td>
-                                    {Object.keys(attendee.members)
+                                    {Object.keys(attendee)
                                         .filter(key => !['user_id', 'created_at', 'updated_at'].includes(key))
                                         .map(field => (
                                             <td
                                                 key={field}
                                                 className="px-4 py-2 whitespace-nowrap"
                                             >
-                                                {attendee.members[field] || 'N/A'}
+                                                {(attendee[field as keyof typeof attendee] || 'N/A')}
                                             </td>
                                         ))
                                     }
                                     <td className="px-4 py-2 whitespace-nowrap">
-                                        {attendee.members.user_id}
+                                        {attendee.user_id}
                                     </td>
                                 </tr>
                             ))}

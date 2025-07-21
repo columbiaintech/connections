@@ -1,11 +1,10 @@
 "use client";
-import styles from "../app/styles/Home.module.css"
 import React from "react";
-import {useCallback, useState, FormEvent} from "react";
+import {useState, FormEvent} from "react";
 import {createGroupWithInvites} from "@/app/actions/updateData";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
-import CSVUpload from "@/components/CSVUpload";
+import {GroupInvite, GroupRole, InviteField} from "@/types/types";
 // TODO: get event details as textinput: event name, location, date, time
 
 export default function NewGroupForm() {
@@ -13,11 +12,15 @@ export default function NewGroupForm() {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
-    const [invites, setInvites] = useState<{ email: string; role: string }[]>([]);
+    const [invites, setInvites] = useState<GroupInvite[]>([]);
 
-    const handleInviteChange = (index: number, field: string, value: string) => {
+    const handleInviteChange = (index: number, field: InviteField, value: string) => {
         const updated = [...invites];
-        updated[index][field] = value;
+        if (field === 'role' && ['member', 'admin', 'owner'].includes(value)) {
+            updated[index].role = value as GroupRole;
+        } else if (field === 'email') {
+            updated[index].email = value;
+        }
         setInvites(updated);
     };
 
@@ -40,8 +43,12 @@ export default function NewGroupForm() {
             } else {
                 throw new Error("Failed to create group.");
             }
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('An unknown error occurred.');
+            }
         } finally {
             setIsLoading(false);
         }

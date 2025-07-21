@@ -16,7 +16,7 @@ import {
 interface DatePickerProps{
     selected: Date | null;
     value: Date | null;
-    onChange: (date:date)=>void;
+    onChange: (date: Date | null) => void;
 }
 
 function DatePicker({selected, value,onChange}:DatePickerProps) {
@@ -37,8 +37,8 @@ function DatePicker({selected, value,onChange}:DatePickerProps) {
             <PopoverContent className="w-auto p-0">
                 <Calendar
                     mode="single"
-                    selected={selected}
-                    onSelect={onChange}
+                    selected={selected||undefined}
+                    onSelect={(date) => onChange(date ?? null)}
                     initialFocus
                 />
             </PopoverContent>

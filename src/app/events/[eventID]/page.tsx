@@ -5,23 +5,17 @@ import AttendeesTable from "@/components/AttendeesTable";
 import ConnectionsTable from "@/components/ConnectionsTable";
 import TabNavigator from "@/components/TabNavigator";
 
-type EventPageProps = {
-    params: {
-        eventId: string
-    }
-}
-
-export default async function Home({params}:EventPageProps) {
-    const param = await params
-    const eventId = await param.eventID;
-    if (!eventId) {
+export default async function Home({params}: { params: Promise<{ eventID: string }>}) {
+    const resolvedParams = await params;
+    const id = resolvedParams.eventID;
+    if (!id) {
         return <div>Event ID is required</div>;
     }
 
     try {
         const [eventDetails, eventAttendees] = await Promise.all([
-            fetchEventDetails(eventId),
-            fetchEventAttendees(eventId)
+            fetchEventDetails(id),
+            fetchEventAttendees(id)
         ]);
         console.log('Event details:', eventDetails);
         console.log('Event attendees:', eventAttendees);
@@ -36,8 +30,8 @@ export default async function Home({params}:EventPageProps) {
                     <div
                         className="w-full bg-style2 bg-cover bg-no-repeat bg-center list-inside text-sm text-center sm:text-left shadow-sm sm:rounded-lg">
                         <TabNavigator tabs={[
-                            {id: 'attendees', label:'Attendees', content: <AttendeesTable eventAttendees={eventAttendees} eventId={eventId}/>},
-                            {id: 'connections', label:'Connections', content: <ConnectionsTable eventAttendees={eventAttendees} eventId={eventId}/>}
+                            {id: 'attendees', label:'Attendees', content: <AttendeesTable eventAttendees={eventAttendees} eventId={id}/>},
+                            {id: 'connections', label:'Connections', content: <ConnectionsTable eventId={id}/>}
                             ]}/>
                     </div>
                 </main>

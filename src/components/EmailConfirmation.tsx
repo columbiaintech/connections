@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { confirmSignUp } from '../app/actions/auth';
 import { createClient } from '../../utils/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 export default function EmailConfirmation() {
     const [status, setStatus] = useState('verifying');
     const [errorMessage, setErrorMessage] = useState('');
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState<User| null>(null);
     const searchParams = useSearchParams();
     const router = useRouter();
 

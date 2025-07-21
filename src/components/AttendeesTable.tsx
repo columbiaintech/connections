@@ -1,41 +1,49 @@
 "use client";
-import {parse} from 'papaparse';
-import React, {useState, useEffect} from "react";
+import React, {useState} from "react";
 import {createAttendee, deleteAttendee, updateAttendee} from "@/app/actions/updateData";
+import {Tables} from "@/types/supabase";
 
+type Member = Tables<'members'> & { [key: string]: any };
+type EventAttendee = {
+    members: Member;
+    wants_intro: boolean;
+};
 
-// TODO: displays attendees in table format on the event page, allows user to modify db if needed (delete, update, create)
+type NewAttendee = {
+    members: Record<string, string>;
+    wants_intro: boolean;
+};
 
-interface AttendeesTableProps{
-    eventAttendees: string[];
-    eventId: string;
-}
-
-export default function AttendeesTable({eventAttendees, eventId}: AttendeesTableProps){
-    const userFields = eventAttendees.length>0 ? Object.keys(eventAttendees[0].members).filter(key=>!['user_id', 'created_at', 'updated_at'].includes(key)):[];
-    const [attendees, setAttendees] = useState(eventAttendees);
-    const [editing, setEditing] = useState(null);
+export default function AttendeesTable({eventAttendees, eventId}: {eventAttendees: any[], eventId: string}){
+    const userFields = eventAttendees.length>0 ? Object.keys(eventAttendees[0].members).filter(key=>!['user_id', 'created_at', 'updated_at', 'email'].includes(key)):[];
+    const [attendees, setAttendees] = useState<EventAttendee[]>(eventAttendees);
+    const [editing, setEditing] = useState<string | null>(null);
     const [isAddingNew, setIsAddingNew] = useState(false);
 
-    const createEmptyAttendee = () => {
-        const userObject = userFields.reduce((acc, field)=>{
-            acc[field] = '';
-            return acc;
-        },{});
+    function createEmptyAttendee(): NewAttendee {
+        const userObject: Record<string, string> = {
+            email: '',
+        };
+
+        userFields.forEach((field) => {
+            if (!(field in userObject)) {
+                userObject[field] = '';
+            }
+        });
         return{
-            users: userObject,
+            members: userObject,
             wants_intro: false
         }
-    };
+    }
 
-    const [newAttendee, setNewAttendee] = useState(createEmptyAttendee());
+    const [newAttendee, setNewAttendee] = useState<NewAttendee>(createEmptyAttendee());
 
-    const handleEdit = (attendee) => {
+    const handleEdit = (attendee: EventAttendee) => {
         if (isAddingNew) return;
         setEditing(attendee.members.user_id);
     };
 
-    const handleSave = async (attendee) => {
+    const handleSave = async (attendee: EventAttendee) => {
         try{
             const eventAttendeeData = {
                 wants_intro: attendee.wants_intro
@@ -51,7 +59,7 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
         }
     };
 
-    const handleDelete = async (attendee) => {
+    const handleDelete = async (attendee: EventAttendee) => {
         try{
             const updated = await deleteAttendee(attendee.members.user_id, eventId)
             if (updated?.event_attendees){
@@ -64,8 +72,13 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
     };
 
     const handleCreate = async () => {
+        if (!newAttendee.members.email) {
+            alert("Email is required.");
+            return;
+        }
+
         try{
-            const created = await createAttendee(eventId, newAttendee);
+            const created = await createAttendee(eventId, { members: { ...newAttendee.members, email: newAttendee.members.email || '' } });
             if (created?.event_attendees){
                 setAttendees(created.event_attendees);
             }
@@ -132,15 +145,15 @@ export default function AttendeesTable({eventAttendees, eventId}: AttendeesTable
                                     {editing === attendee.members.user_id ? (
                                         <input
                                             type="text"
-                                            defaultValue={attendee.members[field] || ''}
+                                            defaultValue={String(attendee.members[field as keyof Member] ?? 'N/A')}
                                             onChange={e => {
-                                                const updatedAttendee = { ...attendee, users: { ...attendee.members, [field]: e.target.value } };
+                                                const updatedAttendee = { ...attendee, members: { ...attendee.members, [field]: e.target.value } };
                                                 setAttendees(current => current.map(a => a.members.user_id === attendee. members.user_id ? updatedAttendee : a));
                                             }}
                                             className="w-full p-1 border rounded"
                                         />
                                     ) : (
-                                        attendee.members[field] || 'N/A'
+                                        String(attendee.members[field as keyof Member] ?? 'N/A')
                                     )}
                                 </td>
                             ))}

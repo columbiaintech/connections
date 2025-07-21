@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import {useState} from "react";
-import {signup} from "../app/actions/auth.ts"
+import {signup} from "@/app/actions/auth"
 
 function SignUpForm() {
     const [firstName, setFirstName] = useState('');
@@ -12,7 +12,7 @@ function SignUpForm() {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
-    const handleSignUp = async (formData) => {
+    const handleSignUp = async (formData: FormData) => {
         setError('');
         setIsLoading(true);
 
@@ -35,7 +35,11 @@ function SignUpForm() {
                 setError('An error has occurred. Please try again.');
             }
         } catch(e){
-                setError(e.message||'An error has occurred. Please try again.')
+                if (e instanceof Error) {
+                    setError(e.message);
+                } else {
+                    setError('An error has occurred. Please try again.');
+                }
             } finally{
             setIsLoading(false);
         }

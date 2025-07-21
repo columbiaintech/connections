@@ -1,13 +1,13 @@
 "use client";
-import styles from "../app/styles/Home.module.css"
 import DatePicker from "./DatePicker"
 import CSVUpload from "@/components/CSVUpload";
 import React from "react";
-import {useCallback, useState, FormEvent} from "react";
+import {useState, FormEvent} from "react";
 import {parse} from 'papaparse';
 import {createEvent} from "@/app/actions/updateData";
 import {ColumnMap} from "@/components/CSVMapping";
 import {useRouter} from "next/navigation";
+import {MemberDataInput} from "@/types/types";
 // TODO: get event details as textinput: event name, location, date, time
 
 interface EventFormProps {
@@ -40,7 +40,7 @@ function EventForm({dbColumns, groupId, groupList}: EventFormProps) {
         setColumnMapping(mapping);
     }
 
-    const handleDateChange = (date: Date) => {
+    const handleDateChange = (date: Date | null) => {
         setEventDate(date);
     };
 
@@ -65,7 +65,7 @@ function EventForm({dbColumns, groupId, groupList}: EventFormProps) {
             }
 
 
-            const processFile = (): Promise<Record<string, any>[]> => {
+            const processFile = (): Promise<MemberDataInput[]> => {
                 return new Promise((resolve, reject)=>{
                     parse(file, {
                         header: true,
@@ -77,10 +77,10 @@ function EventForm({dbColumns, groupId, groupList}: EventFormProps) {
                             }
 
                             const mappedData = data.map((row: any) => {
-                                const newRow: Record<string, any> ={};
+                                const newRow: Partial<MemberDataInput> ={};
                                 columnMapping.forEach(map => {
                                     if (map.csvColumn && row[map.csvColumn] !== undefined) {
-                                        newRow[map.dbColumn] = row[map.csvColumn];
+                                        newRow[map.dbColumn as keyof MemberDataInput] = row[map.csvColumn];
                                     }
                                 });
                                 return newRow;
@@ -88,8 +88,11 @@ function EventForm({dbColumns, groupId, groupList}: EventFormProps) {
                             if (mappedData.length === 0) {
                                 return reject(new Error("No valid data found after processing."));
                             }
+                            if (mappedData.some(row => !row.email)) {
+                                return reject(new Error("Each row must contain an email."));
+                            }
 
-                            resolve(mappedData);
+                            resolve(mappedData as MemberDataInput[]);
                         },
                         error: (error) => reject(error),
                     });
@@ -106,8 +109,11 @@ function EventForm({dbColumns, groupId, groupList}: EventFormProps) {
             }
 
         } catch(error){
-            setError(error.message)
-            console.error(error)
+            if (error instanceof Error) {
+                setError(error.message);
+            } else {
+                setError('An unknown error occurred');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -120,8 +126,9 @@ function EventForm({dbColumns, groupId, groupList}: EventFormProps) {
                           spellCheck="false"
                           autoCapitalize="words"
                     onInput={(e) => {
-                        e.target.style.height = '';
-                        e.target.style.height = e.target.scrollHeight + 'px';
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = '';
+                        target.style.height = target.scrollHeight + 'px';
                     }}
                           className="ps-2 w-full font-[family-name:var(--font-sourceSans3)] text-3xl rounded-sm border border-steel/15 rounded focus-visible:outline-4 focus-visible:outline-offset-1 focus-visible:outline-steel-100/50 focus-visible:ring-2"
                           placeholder={"Event Name"}

@@ -15,7 +15,7 @@ export default async function ThreadView({ connectionId }: { connectionId: strin
         {thread.map((msg)=>(
             <div key={msg.created_at}>
                 <p>{msg.sender_email}</p>
-                <div dangerouslySetInnerHTML={{__html: msg.body}} className="text-steel" />
+                <div dangerouslySetInnerHTML={{__html: msg.body ?? ''}} className="text-steel" />
             </div>
                 ))}
         </div>
