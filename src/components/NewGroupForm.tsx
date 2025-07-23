@@ -39,7 +39,6 @@ export default function NewGroupForm() {
             const result = await createGroupWithInvites(trimmedGroupName, validInvites);
             if (result?.groupId) {
                 router.push('/dashboard');
-                router.refresh();
             } else {
                 throw new Error("Failed to create group.");
             }
@@ -99,17 +98,10 @@ export default function NewGroupForm() {
                     + Add invite
                 </button>
 
-
-                {/*<h3 className="text-lg mb-2">Upload Member Data</h3>*/}
-                {/*<div className="mb-4">*/}
-                {/*    <CSVUpload></CSVUpload>*/}
-                {/*</div>*/}
-
                 <div className="flex items-center justify-between">
                     <Link href="/dashboard" className="btn-outline text-s text-steel">
                         Cancel
                     </Link>
-
 
                     <button
                     type="submit"
@@ -119,6 +111,7 @@ export default function NewGroupForm() {
                     {isLoading ? "Creating..." : "Create Group"}
                 </button>
                 </div>
+
                 {error && <p className="text-red-500 mt-2">{error}</p>}
             </form>
         </div>
