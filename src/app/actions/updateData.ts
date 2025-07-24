@@ -43,7 +43,7 @@ interface MemberDataInput {
     [key: string]: any;
 }
 
-interface ProcessedUser extends MemberDataInput {
+interface ProcessedMember extends MemberDataInput {
     user_id: string;
 }
 
@@ -57,7 +57,7 @@ export interface CreateEventInput {
 interface CreateEventResult {
     event: Event;
     event_attendees: EventAttendee[];
-    users: ProcessedUser[];
+    members: ProcessedMember[];
     message: string;
 }
 
@@ -79,7 +79,7 @@ interface GroupCreationResult {
 
 interface ProcessMembersResult {
     userMap: Map<string, string>;
-    processedUsers: ProcessedUser[];
+    processedMembers: ProcessedMember[];
 }
 
 interface GroupDetailsResult {
@@ -124,14 +124,14 @@ export async function fetchColumns() {
 
         if (attendeeError) {
             throw attendeeError;
+            attendeeCols = (fallbackCols as string[]).filter(
+                (col) => !['event_id', 'user_id', 'created_at'].includes(col)
         }
 
         const userCols = (userData as string[]).filter(column =>
             !['created_at', 'updated_at', 'user_id'].includes(column)
         );
         const attendeeCols = attendeeData.filter(column =>
-            !['event_id', 'user_id', 'created_at'].includes(column)
-        );
 
         return [...userCols, ...attendeeCols];
 
@@ -142,17 +142,16 @@ export async function fetchColumns() {
     }
 }
 
-async function findExistingUsers(emails: string[]): Promise<Map<string, string>>{
     const supabase = await createClient();
     try {
-        const {data: existingUsers, error} = await supabase
+        const {data: existingMembers, error} = await supabase
             .from('members')
             .select('user_id, email')
             .in('email', emails);
         if(error) throw error;
-        return new Map(existingUsers?.map((member: { email: string; user_id: string })=>[member.email, member.user_id])||[]);
+        return new Map(existingMembers?.map((member: { email: string; user_id: string })=>[member.email, member.user_id])||[]);
     } catch(error){
-        console.error('Error finding existing users:', error);
+        console.error('Error finding existing members:', error);
         throw error;
     }
 }
@@ -167,7 +166,7 @@ async function createMembers(userData: MemberDataInput[], groupId: string | null
 
         const memberSet = new Set(memberColumns);
 
-        const newUsers: MemberInsert[] = userData.map(member => {
+        const newMembers: MemberInsert[] = userData.map(member => {
             const memberPayload: MemberInsert = {
                 user_id: uuidv4(),
                 created_at: new Date().toISOString(),
@@ -184,16 +183,16 @@ async function createMembers(userData: MemberDataInput[], groupId: string | null
             return memberPayload;
         });
 
-        const {data: insertedUsers, error} = await supabase
+        const {data: insertedMembers, error} = await supabase
             .from('members')
-            .insert(newUsers)
+            .insert(newMembers)
             .select(`*`);
         if (error) throw error;
 
-        if (groupId && insertedUsers) {
-            await addUsersToGroup(insertedUsers.map((user: { user_id: string }) => user.user_id), groupId);
+        if (groupId && insertedMembers) {
+            await addMembersToGroup(insertedMembers.map((user: { user_id: string }) => user.user_id), groupId);
         }
-        return insertedUsers || [];
+        return insertedMembers || [];
         }
         catch(error){
             console.error('Error creating members:', error);
@@ -201,7 +200,7 @@ async function createMembers(userData: MemberDataInput[], groupId: string | null
         }
 }
 
-async function addUsersToGroup(userIds: string[], groupId: string): Promise<void> {
+async function addMembersToGroup(userIds: string[], groupId: string): Promise<void> {
     if (!userIds.length) return;
     const supabase = await createClient();
     try {
@@ -214,10 +213,10 @@ async function addUsersToGroup(userIds: string[], groupId: string): Promise<void
         if (checkError) throw checkError;
 
         const existingMemberIds = new Set(existingGroupMembers?.map(member => member.user_id) || []);
-        const usersToAdd = userIds.filter(userId => !existingMemberIds.has(userId));
+        const membersToAdd = userIds.filter(userId => !existingMemberIds.has(userId));
 
-        if (usersToAdd.length > 0) {
-            const userGroupRecords: UserGroupInsert[] = usersToAdd.map(userId => ({
+        if (membersToAdd.length > 0) {
+            const userGroupRecords: UserGroupInsert[] = membersToAdd.map(userId => ({
                 user_id: userId,
                 group_id: groupId,
                 role: 'member' as GroupRole,
@@ -231,7 +230,7 @@ async function addUsersToGroup(userIds: string[], groupId: string): Promise<void
             if (error) throw error;
         }
     } catch (error) {
-        console.error('Error adding users to group:', error);
+        console.error('Error adding members to group:', error);
         throw error;
     }
 }
@@ -239,30 +238,30 @@ async function addUsersToGroup(userIds: string[], groupId: string): Promise<void
 async function processMembers(memberData: MemberDataInput[], groupId: string | null = null): Promise<ProcessMembersResult>{
     const supabase = await createClient();
     const emails = memberData.map(member=>member.email);
-    const existingUsers = await findExistingUsers(emails);
-    const newUsers = memberData.filter(member=>!existingUsers.has(member.email));
-    const createdUsers = newUsers.length>0 ? await createMembers(newUsers, groupId) : [];
+    const existingMembers = await findExistingMembers(emails);
+    const newMembers = memberData.filter(member=>!existingMembers.has(member.email));
+    const createdMembers = newMembers.length>0 ? await createMembers(newMembers, groupId) : [];
 
-    createdUsers.forEach(member=>existingUsers.set(member.email!, member.user_id));
+    createdMembers.forEach(member=>existingMembers.set(member.email!, member.user_id));
 
-    const allUserIds = Array.from(existingUsers.values());
+    const allMemberIds = Array.from(existingMembers.values());
 
     const { data: membersPresent, error: fetchMembersError } = await supabase
         .from('members')
         .select('user_id')
-        .in('user_id', allUserIds);
+        .in('user_id', allMemberIds);
 
     if (fetchMembersError) throw fetchMembersError;
 
     const existingMemberIds = new Set(membersPresent?.map(m => m.user_id) || []);
     const usersMissingInMembers = memberData.filter(member => {
-        const userId = existingUsers.get(member.email);
+        const userId = existingMembers.get(member.email);
         return userId && !existingMemberIds.has(userId);
     });
 
     if (usersMissingInMembers.length > 0) {
         const fallbackMembers: MemberInsert[] = usersMissingInMembers.map(member => ({
-            user_id: existingUsers.get(member.email)!,
+            user_id: existingMembers.get(member.email)!,
             email: member.email,
             name: member.name || `${member.first_name || ''} ${member.last_name || ''}`.trim(),
             group_id: groupId,
@@ -278,20 +277,20 @@ async function processMembers(memberData: MemberDataInput[], groupId: string | n
     }
 
     if (groupId) {
-        const existingUserIds = Array.from(existingUsers.values());
-        await addUsersToGroup(existingUserIds, groupId);
+        const existingUserIds = Array.from(existingMembers.values());
+        await addMembersToGroup(existingUserIds, groupId);
     }
 
     return{
-        userMap: existingUsers,
-        processedUsers: memberData.map(member=>({
+        userMap: existingMembers,
+        processedMembers: memberData.map(member=>({
             ...member,
-            user_id: existingUsers.get(member.email)!
+            user_id: existingMembers.get(member.email)!
         }))
     };
 }
 
-async function createEventAttendees(eventId: string, attendees: ProcessedUser[]): Promise<EventAttendee[]>{
+async function createEventAttendees(eventId: string, attendees: ProcessedMember[]): Promise<EventAttendee[]>{
     if (!attendees.length) return [];
     const supabase = await createClient();
     try{
@@ -334,13 +333,13 @@ export async function createEvent({ eventName, eventDate, mappedData, groupId=nu
 
         if (eventError) throw eventError;
 
-        const {processedUsers} = await processMembers(mappedData, groupId);
-        const attendeeData = await createEventAttendees(eventId, processedUsers);
+        const {processedMembers} = await processMembers(mappedData, groupId);
+        const attendeeData = await createEventAttendees(eventId, processedMembers);
 
         return {
             event: eventData,
             event_attendees: attendeeData,
-            users: processedUsers,
+            members: processedMembers,
             message: 'Successfully created event & added users to the database.'
         };
 
@@ -414,9 +413,9 @@ export async function fetchEligibleAttendees(eventId: string): Promise<(EventAtt
 
 export async function createAttendee(eventId: string, memberData: { members: MemberDataInput }): Promise<AttendeeUpdateResult | undefined>{
     try{
-        const {processedUsers} = await processMembers([memberData.users]);
-        const processedUser = processedUsers[0];
-        await createEventAttendees(eventId, [processedUser]);
+        const {processedMembers} = await processMembers([memberData.members]);
+        const processedMember = processedMembers[0];
+        await createEventAttendees(eventId, [processedMember]);
         const updatedAttendees = await fetchEventAttendees(eventId);
         return {
             event_attendees: updatedAttendees,
