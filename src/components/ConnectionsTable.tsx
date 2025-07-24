@@ -1,14 +1,21 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import {fetchConnectionThread, fetchEventAttendees, fetchEventConnections, generateRandomConnections} from "@/app/actions/updateData";
+import {
+    fetchConnectionThread,
+    fetchEligibleAttendees,
+    fetchEventConnections,
+    generateRandomConnections,
+    updateConnectionStatus
+} from "@/app/actions/updateData";
 import EmailThreadButton from "@/components/EmailThreadButton";
 import ThreadView from "@/components/ThreadView";
-import type { Tables } from "@/types/supabase";
+import type {Enums, Tables} from "@/types/supabase";
 
 type EventAttendee = Tables<'event_attendees'>;
 type Connection = Tables<'connections'>;
 type EnrichedConnection = Tables<'enriched_connections'>;
 type ConnectionThread = Tables<'connection_threads'>;
+type ConnectionStatus = Enums<'connection_status'>;
 
 interface ConnectionsTableProps {
     eventId: string;
@@ -28,7 +35,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         const loadConnections = async () => {
             setLoading(true);
             try {
-                const attendeesData = await fetchEventAttendees(eventId) as EventAttendee[];
+                const attendeesData = await fetchEligibleAttendees(eventId) as EventAttendee[];
                 const introAttendees = attendeesData.filter(attendee => attendee.wants_intro);
                 setAttendees(introAttendees);
                 setSelectedAttendees(introAttendees.map(a => a.user_id));
@@ -43,6 +50,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
 
         loadConnections();
     }, [eventId]);
+
 
     const handleGenerateConnections = async () => {
         setGeneratingConnections(true);
@@ -82,7 +90,6 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         if (selectedAttendees.length === attendees.length) {
             setSelectedAttendees([]);
         } else {
-            setSelectedAttendees(attendees.map(a => a.user_id));
         }
     };
 
@@ -108,6 +115,22 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         }
     };
 
+    const handleStatusChange = async (connectionId: string, newStatus: string) => {
+        try {
+            const result = await updateConnectionStatus(connectionId, newStatus as ConnectionStatus);
+            if (result.success) {
+                const data = await fetchEventConnections(eventId) as EnrichedConnection[];
+                setConnections(data);
+                setEditing(prev => ({ ...prev, [connectionId]: false }));
+            } else {
+                alert(result.message);
+            }
+        } catch (error) {
+            console.error("Error updating connection status:", error);
+            alert("Failed to update connection status");
+        }
+    };
+
     const toggleThread = async (connectionId: string) => {
         setExpandedThreads((prev) => {
             const isOpen = prev[connectionId]?.open
@@ -129,6 +152,13 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
             }))
         }
     }
+    const renderFieldValue = (value: any) => {
+        if (value === null || value === undefined) return "N/A";
+        if (typeof value === "object") return JSON.stringify(value);
+        return String(value);
+    };
+
+    const emailNotSentConnections = connections.filter(c => c.status === 'email_not_sent');
 
     return (
         <div className="w-full h-full container mx-auto p-4">
@@ -159,10 +189,9 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                                 </th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Connection ID</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User 1 ID</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User 2 ID</th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User 1</th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User 2</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thread</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -238,12 +267,12 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                         <button
                             onClick={handleGenerateConnections}
                             disabled={generatingConnections || selectedAttendees.length === 0}
-                            className={`
+                            className={`btn-primary
                                 ${selectedAttendees.length === 0
                                 ? 'bg-gray-400 cursor-not-allowed'
                                 : 'bg-sea-600 hover:bg-sea-500'
                             } 
-                                text-white py-2 px-4 rounded
+                                text-white py-1 px-3 rounded
                             `}
                         >
                             {generatingConnections ? 'Generating...' : 'Generate Connections'}
@@ -296,12 +325,15 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                                     {Object.keys(attendee)
                                         .filter(key => !['user_id', 'created_at', 'updated_at'].includes(key))
                                         .map(field => (
-                                            <td
+                                            const value = attendee[field as keyof typeof attendee];
+                                        return (
+                                        <td
                                                 key={field}
                                                 className="px-4 py-2 whitespace-nowrap"
                                             >
-                                                {(attendee[field as keyof typeof attendee] || 'N/A')}
+                                                {renderFieldValue(value)}
                                             </td>
+                                        );
                                         ))
                                     }
                                     <td className="px-4 py-2 whitespace-nowrap">
