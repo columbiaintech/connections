@@ -1,10 +1,27 @@
 "use client";
 import React, { useRef } from 'react';
+import { Tables, TablesInsert, TablesUpdate, Enums } from '@/types/supabase';
 
-const Viz = ({ groupData }: { groupData: any }) => {
+type Member = Tables<'members'>;
+type Event = Tables<'events'>;
+type EventAttendee = Tables<'event_attendees'>;
+type EnrichedConnection = Tables<'enriched_connections'>;
+
+interface GroupData {
+    members: Member[];
+    events: Event[];
+    attendees: EventAttendee[];
+    enriched_connections: EnrichedConnection[];
+}
+
+interface VizProps {
+    groupData: GroupData;
+}
+
+const Viz = ({ groupData }: VizProps) => {
     const { members, events, attendees, enriched_connections=[] } = groupData;
 
-    const svgRef = useRef(null);
+    const svgRef = useRef<SVGSVGElement | null>(null);
 
     if (!events?.length) {
         return (
@@ -22,24 +39,26 @@ const Viz = ({ groupData }: { groupData: any }) => {
     const radius = 200;
 
     const positions = new Map<string, { x: number; y: number }>();
-    members.forEach((member, i) => {
-        const angle = (i * 2 * Math.PI) / members.length;
+    const validMembers = members.filter((m) => m.user_id);
+
+    validMembers.forEach((member, i) => {
+        const angle = (i * 2 * Math.PI) / validMembers.length;
         const x = centerX + Math.cos(angle) * radius;
         const y = centerY + Math.sin(angle) * radius;
         positions.set(member.user_id, { x, y });
     });
 
     const renderedConnections = enriched_connections
-        .map((conn) => {
-            const from = positions.get(conn.user1_id);
-            const to = positions.get(conn.user2_id);
+        .map((conn: EnrichedConnection) => {
+            const from = positions.get(conn.user1_id ?? '');
+            const to = positions.get(conn.user2_id ?? '');
             return from && to
                 ? { from, to, status: conn.status, users: [conn.user1_id, conn.user2_id] }
                 : null;
         })
-        .filter(Boolean);
+        .filter((conn): conn is NonNullable<typeof conn> => conn !== null);
 
-    const getUserById = (id) => members.find((m) => m.user_id === id);
+    const getUserById = (id: string):Member|undefined => members.find((m) => m.user_id === id);
 
     return (
         <div className="space-y-6">
@@ -72,7 +91,7 @@ const Viz = ({ groupData }: { groupData: any }) => {
                             />
                         ))}
 
-                        {members.map((member) => {
+                        {validMembers.map((member) => {
                             const pos = positions.get(member.user_id);
                             if (!pos) return null;
 
@@ -116,7 +135,7 @@ const Viz = ({ groupData }: { groupData: any }) => {
                                     >
                                         <div className="bg-gray-800 text-white text-xs p-2 rounded shadow-lg">
                                             <div className="font-semibold">{member.email}</div>
-                                            <div className="text-gray-300">Role: {member.role || 'member'}</div>
+                                            <div className="text-gray-300">Role: { 'member'}</div>
                                         </div>
                                     </foreignObject>
                                 </g>
@@ -132,11 +151,11 @@ const Viz = ({ groupData }: { groupData: any }) => {
                     </div>
                     <div className="card-teal p-4 rounded-lg">
                         <h4 className="font-semibold text-lg">Active Members</h4>
-                        <p className="text-2xl font-bold text-loch">{members.length}</p>
+                        <p className="text-2xl font-bold text-loch">{validMembers.length}</p>
                     </div>
                     <div className="card-teal p-4 rounded-lg">
                         <h4 className="font-semibold text-lg">Total Connections</h4>
-                        <p className="text-2xl font-bold text-loch">{enriched_connections.length}</p>
+                        <p className="text-2xl font-bold text-loch">{renderedConnections.length}</p>
                     </div>
                 </div>
             </section>
