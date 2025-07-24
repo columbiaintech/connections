@@ -21,6 +21,8 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
     const [expandedThreads, setExpandedThreads] = useState<{ [key: string]: any }>({});
     const [loading, setLoading] = useState(true);
     const [generatingConnections, setGeneratingConnections] = useState(false);
+    const [editing, setEditing] = useState<{ [key: string]: boolean }>({});
+    const [selectedConnections, setSelectedConnections] = useState<string[]>([]);
 
     useEffect(() => {
         const loadConnections = async () => {
@@ -68,6 +70,14 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         );
     };
 
+    const handleConnectionSelection = (connectionId: string) => {
+        setSelectedConnections(prev =>
+            prev.includes(connectionId)
+                ? prev.filter(id => id !== connectionId)
+                : [...prev, connectionId]
+        );
+    };
+
     const toggleAllAttendees = () => {
         if (selectedAttendees.length === attendees.length) {
             setSelectedAttendees([]);
@@ -75,7 +85,16 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
             setSelectedAttendees(attendees.map(a => a.user_id));
         }
     };
-    
+
+    const toggleAllConnections = () => {
+        const emailNotSentConnections = connections.filter(c => c.status === 'email_not_sent');
+        if (selectedConnections.length === emailNotSentConnections.length) {
+            setSelectedConnections([]);
+        } else {
+            setSelectedConnections(emailNotSentConnections.map(c => c.connection_id).filter((id): id is string => id !== null));
+        }
+    };
+
     const getStatusBadgeClass = (status: string | null): string => {
         switch (status) {
             case 'pending':
@@ -114,7 +133,14 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
     return (
         <div className="w-full h-full container mx-auto p-4">
             <div className="mb-8">
+                <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-semibold mb-4 font-[family-name:var(--font-sourceSans3)]">Existing Connections</h2>
+                <div className="space-x-3">
+                    {emailNotSentConnections.length > 0 && (
+                        <EmailThreadButton connectionIds={selectedConnections}/>
+                    )}
+                </div>
+                </div>
                 {loading ? (
                     <div className="text-center py-10">Loading connections...</div>
                 ) : connections.length > 0 ? (
@@ -122,6 +148,15 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                         <table className="min-w-full divide-y divide-gray-200 table-auto">
                             <thead className="bg-gray-50">
                             <tr>
+                                <th className="px-4 py-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedConnections.length === emailNotSentConnections.length && emailNotSentConnections.length > 0}
+                                        onChange={toggleAllConnections}
+                                        disabled={emailNotSentConnections.length === 0}
+                                        className="form-checkbox h-5 w-5 text-blue-600"
+                                    />
+                                </th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Connection ID</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User 1 ID</th>
@@ -134,35 +169,56 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                             {connections.map(connection => (
                                 <React.Fragment key={connection.connection_id}>
                                     <tr>
-                                    <td className="px-4 py-2 whitespace-nowrap">{connection.connection_id}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap">
-                                            <span className={`px-2 py-1 rounded ${getStatusBadgeClass(connection.status)}`}>
-                                                {connection.status}
-                                            </span>
-                                    </td>
-                                    <td className="px-4 py-2">{connection.user1_name}</td>
-                                    <td className="px-4 py-2">{connection.user2_name}</td>
-                                    <td className="px-4 py-2">{connection.latest_subject || 'No email sent'}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap">
-                                        <div className="px-4 py-2 whitespace-nowrap">
-                                        {/*<button onClick={()=>toggleThread(connection.connection_id)} className="text-sm text-blue-600 underline">*/}
-                                        {/*    {expandedThreads[connection.connection_id]?.open ? 'Hide' : 'Show'} Thread*/}
-                                        {/*</button>*/}
-                                        </div>
-                                        {connection.connection_id && (
-                                            <EmailThreadButton connectionId={connection.connection_id} />
-                                        )}
-                                    </td>
-                                </tr>
-                            {expandedThreads[connection.connection_id!]?.open && (
-                                <tr className="bg-gray-50">
-                                <td colSpan={7} className="px-6 py-4">
-                                    {connection.connection_id && (
-                                        <ThreadView connectionId={connection.connection_id} />
+                                        <td className="px-4 py-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={connection.connection_id !== null && selectedConnections.includes(connection.connection_id)}
+                                                onChange={() => connection.connection_id && handleConnectionSelection(connection.connection_id)}
+                                                disabled={connection.status !== 'email_not_sent'}
+                                                className="form-checkbox h-5 w-5 text-blue-600"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-2 whitespace-nowrap">{connection.connection_id}</td>
+                                        <td className="px-4 py-2 whitespace-nowrap">
+                                            {typeof connection.connection_id === 'string' && editing[connection.connection_id] ? (
+                                                <select
+                                                    value={connection.status ?? 'email_not_sent'}
+                                                    onChange={(e) => connection.connection_id && handleStatusChange(connection.connection_id, e.target.value)}
+                                                    onBlur={() => setEditing(prev => ({ ...prev, [connection.connection_id!]: false }))}
+                                                    className="px-2 py-1 border rounded"
+                                                    autoFocus
+                                                >
+                                                    <option value="email_not_sent">Email Not Sent</option>
+                                                    <option value="pending">Pending</option>
+                                                    <option value="accepted">Accepted</option>
+                                                    <option value="declined">Declined</option>
+                                                </select>
+                                            ) : (
+                                                <span
+                                                    className={`px-2 py-1 rounded cursor-pointer ${getStatusBadgeClass(connection.status)}`}
+                                                    onClick={() => setEditing(prev => ({ ...prev, [connection.connection_id!]: true }))}
+                                                >
+                                                    {connection.status ?? "email_not_sent"}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-2 whitespace-nowrap">
+                                            {connection.user1_name}
+                                        </td>
+                                        <td className="px-4 py-2 whitespace-nowrap">
+                                            {connection.user2_name}
+                                        </td>
+                                        <td className="px-4 py-2 whitespace-nowrap">
+                                            {connection.latest_subject ?? "No email sent"}
+                                        </td>
+                                    </tr>
+                                    {typeof connection.connection_id === 'string' && expandedThreads[connection.connection_id]?.open && (
+                                        <tr className="bg-gray-50">
+                                            <td colSpan={6} className="px-6 py-4">
+                                                {connection.connection_id && <ThreadView connectionId={connection.connection_id} />}
+                                            </td>
+                                        </tr>
                                     )}
-                                </td>
-                                </tr>
-                                )}
                                 </React.Fragment>
                                 ))}
                         </tbody>
