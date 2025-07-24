@@ -90,6 +90,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
         if (selectedAttendees.length === attendees.length) {
             setSelectedAttendees([]);
         } else {
+            setSelectedAttendees(attendees.map(a => a.user_id));
         }
     };
 
@@ -324,17 +325,16 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                                     </td>
                                     {Object.keys(attendee)
                                         .filter(key => !['user_id', 'created_at', 'updated_at'].includes(key))
-                                        .map(field => (
-                                            const value = attendee[field as keyof typeof attendee];
-                                        return (
-                                        <td
+                                        .map(field => {
+                                            const value = attendee[field as keyof EventAttendee];
+                                            return(
+                                            <td
                                                 key={field}
                                                 className="px-4 py-2 whitespace-nowrap"
                                             >
                                                 {renderFieldValue(value)}
                                             </td>
-                                        );
-                                        ))
+                                        );})
                                     }
                                     <td className="px-4 py-2 whitespace-nowrap">
                                         {attendee.user_id}
