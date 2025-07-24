@@ -104,34 +104,31 @@ export async function fetchColumns() {
             throw userError;
         }
 
-        const { data:attendeeData, error:attendeeError } = await supabase
+        const { data:previewAttendee, error:previewError } = await supabase
             .from('event_attendees')
             .select('*')
-            .limit(1)
-            .then(result => {
-                if (result.data && result.data.length > 0) {
-                    return {
-                        data: Object.keys(result.data[0]),
-                        error: null
-                    };
-                }
-                console.error('Ok here:', error);
+            .limit(1);
 
-                return supabase.rpc('get_event_attendee_columns');
-                console.error('Failed here:', error);
+        let attendeeCols: string[] = [];
 
-            });
+        if (previewError) throw previewError;
 
-        if (attendeeError) {
-            throw attendeeError;
+        if (previewAttendee && previewAttendee.length > 0) {
+            attendeeCols = Object.keys(previewAttendee[0]).filter(
+                (col) => !['event_id', 'user_id', 'created_at'].includes(col)
+            );
+        } else {
+            const { data: fallbackCols, error: fallbackError } = await supabase.rpc('get_event_attendee_columns');
+            if (fallbackError) throw fallbackError;
+
             attendeeCols = (fallbackCols as string[]).filter(
                 (col) => !['event_id', 'user_id', 'created_at'].includes(col)
+            );
         }
 
         const userCols = (userData as string[]).filter(column =>
             !['created_at', 'updated_at', 'user_id'].includes(column)
         );
-        const attendeeCols = attendeeData.filter(column =>
 
         return [...userCols, ...attendeeCols];
 
@@ -142,6 +139,7 @@ export async function fetchColumns() {
     }
 }
 
+async function findExistingMembers(emails: string[]): Promise<Map<string, string>>{
     const supabase = await createClient();
     try {
         const {data: existingMembers, error} = await supabase
