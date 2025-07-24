@@ -486,6 +486,16 @@ export async function deleteAttendee(userId: string, eventId: string): Promise<A
 export async function generateRandomConnections(eventId: string): Promise<ConnectionGenerationResult> {
     const supabase = await createClient();
     try {
+        const {data: event, error: eventError} = await supabase
+            .from('events')
+            .select('group_id')
+            .eq('event_id', eventId)
+            .single();
+        if (eventError) throw eventError;
+        if(!event?.group_id) throw new Error('Event does not have an associated group_id');
+
+        const groupId = event.group_id;
+
         const { data: attendees, error: attendeesError } = await supabase
             .from('event_attendees')
             .select('user_id')
@@ -534,6 +544,7 @@ export async function generateRandomConnections(eventId: string): Promise<Connec
                     user1_id: shuffledUserIds[i],
                     user2_id: shuffledUserIds[j],
                     event_id: eventId,
+                    group_id: groupId,
                     created_at: new Date().toISOString(),
                     status: 'email_not_sent' as ConnectionStatus
                 });
