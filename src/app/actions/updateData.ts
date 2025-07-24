@@ -1,45 +1,102 @@
 "use server";
 import {createClient} from '@utils/supabase/server'
 import { v4 as uuidv4 } from 'uuid';
+import { Tables, TablesInsert, TablesUpdate, Enums } from '@/types/supabase';
+
 // TODO: initialize supabase client, create functions to update event, users, connections data
 
-type Event = {
-    event_id: string;
-    event_name: string;
-    event_date: Date;
-    created_at: Date;
+type Member = Tables<'members'>;
+type Event = Tables<'events'>;
+type EventAttendee = Tables<'event_attendees'>;
+type Connection = Tables<'connections'>;
+type EnrichedConnection = Tables<'enriched_connections'>;
+type PartialConnection = Pick<Connection, 'user1_id' | 'user2_id'>;
+type Group = Tables<'groups'>;
+type UserGroup = Tables<'user_groups'>;
+type ConnectionThread = Tables<'connection_threads'>;
+
+type UserGroupRow = {
+    groups: Group | null;
 };
 
-type User = {
-    user_id: string;
-    name: string;
-    first_name: string;
-    last_name: string;
+type MemberInsert = TablesInsert<'members'>;
+type EventInsert = TablesInsert<'events'>;
+type EventAttendeeInsert = TablesInsert<'event_attendees'>;
+type ConnectionInsert = TablesInsert<'connections'>;
+type GroupInsert = TablesInsert<'groups'>;
+type UserGroupInsert = TablesInsert<'user_groups'>;
+
+type ConnectionStatus = Enums<'connection_status'>;
+type GroupRole = Enums<'group_role'>;
+type RegistrationStatus = Enums<'registration_status'>;
+
+interface MemberDataInput {
     email: string;
-    wants_intro: boolean;
-    created_at: Date;
-    updated_at: Date;
-    school: string;
-    class_year: number;
-    job_title: string;
-    company_name: string;
+    name?: string;
+    first_name?: string;
+    last_name?: string;
+    company?: string;
+    job_title?: string;
+    class_year?: number;
+    school?: string;
+    wants_intro?: boolean;
+    [key: string]: any;
 }
 
-type Connection = {
-    connection_id: string;
-    user1_id: number;
-    user2_id: number;
-    event_id: string;
-    created_at: Date;
-    status: string;
-}
-
-type EventAttendee = {
-    event_id: string;
+interface ProcessedUser extends MemberDataInput {
     user_id: string;
     wants_intro: boolean;
     registered_status: string;
 }
+
+export interface CreateEventInput {
+    eventName: string;
+    eventDate: Date;
+    mappedData: MemberDataInput[];
+    groupId?: string | null;
+}
+
+interface CreateEventResult {
+    event: Event;
+    event_attendees: EventAttendee[];
+    users: ProcessedUser[];
+    message: string;
+}
+
+interface ConnectionGenerationResult {
+    success: boolean;
+    message: string;
+    connections: Connection[];
+}
+
+interface GroupInvite {
+    email: string;
+    role: GroupRole;
+}
+
+interface GroupCreationResult {
+    group: Group;
+    groupId: string;
+}
+
+interface ProcessMembersResult {
+    userMap: Map<string, string>;
+    processedUsers: ProcessedUser[];
+}
+
+interface GroupDetailsResult {
+    group: Group | null;
+    events: Event[];
+    members: Member[];
+    attendees: (EventAttendee & { members: Member })[];
+    connections: EnrichedConnection[];
+}
+
+interface AttendeeUpdateResult {
+    event_attendees: (EventAttendee & { members: Member })[];
+    message: string;
+}
+
 
 export async function fetchColumns() {
     const supabase = await createClient()
