@@ -1,5 +1,5 @@
 "use server";
-import {createClient} from '@utils/supabase/server'
+import {createClient} from '@/utils/supabase/server'
 import { v4 as uuidv4 } from 'uuid';
 import { Tables, TablesInsert, TablesUpdate, Enums } from '@/types/supabase';
 
@@ -45,8 +45,6 @@ interface MemberDataInput {
 
 interface ProcessedUser extends MemberDataInput {
     user_id: string;
-    wants_intro: boolean;
-    registered_status: string;
 }
 
 export interface CreateEventInput {
@@ -393,7 +391,28 @@ export async function fetchEventAttendees(eventId: string): Promise<(EventAttend
     }
 }
 
-export async function createAttendee(eventId: string, memberData: any){
+export async function fetchEligibleAttendees(eventId: string): Promise<(EventAttendee & { members: Member })[]> {
+    const supabase = await createClient();
+    try {
+        const { data, error } = await supabase
+            .from('event_attendees')
+            .select(`*, members (*)`)
+            .eq('event_id', eventId)
+            .eq('wants_intro', true);
+
+        if (error) {
+            throw error;
+        }
+
+        return data || [];
+
+    } catch (error) {
+        console.error('Error fetching eligible attendees:', error);
+        return [];
+    }
+}
+
+export async function createAttendee(eventId: string, memberData: { members: MemberDataInput }): Promise<AttendeeUpdateResult | undefined>{
     try{
         const {processedUsers} = await processMembers([memberData.users]);
         const processedUser = processedUsers[0];
