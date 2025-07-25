@@ -185,6 +185,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                                         checked={selectedConnections.length === emailNotSentConnections.length && emailNotSentConnections.length > 0}
                                         onChange={toggleAllConnections}
                                         disabled={emailNotSentConnections.length === 0}
+                                        onClick={e => e.stopPropagation()}
                                         className="form-checkbox h-5 w-5 text-blue-600"
                                     />
                                 </th>
@@ -198,7 +199,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                             <tbody className="bg-white divide-y divide-gray-200">
                             {connections.map(connection => (
                                 <React.Fragment key={connection.connection_id}>
-                                    <tr>
+                                    <tr onClick={() => toggleThread(connection.connection_id!)} className="hover:bg-gray-100 cursor-pointer transition">
                                         <td className="px-4 py-2">
                                             <input
                                                 type="checkbox"
@@ -226,8 +227,7 @@ export default function ConnectionsTable({ eventId }: ConnectionsTableProps) {
                                             ) : (
                                                 <span
                                                     className={`px-2 py-1 rounded cursor-pointer ${getStatusBadgeClass(connection.status)}`}
-                                                    onClick={() => setEditing(prev => ({ ...prev, [connection.connection_id!]: true }))}
-                                                >
+                                                    onClick={e => {e.stopPropagation(); setEditing(prev => ({ ...prev, [connection.connection_id!]: true }));}}>
                                                     {connection.status ?? "email_not_sent"}
                                                 </span>
                                             )}
