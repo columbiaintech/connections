@@ -43,17 +43,19 @@ export async function POST(req: Request) {
     `;
 
             await resend.emails.send({
-                from: '${group.group_name} <team@updates.mayasundar.com>',
+                from: 'Connections <team@connections.columbiaintech.com>',
                 to: [user1.email, user2.email],
                 subject,
                 html,
+
                 headers: {
-                    'Message-ID': `<${connectionId}@updates.mayasundar.com>`,
-                    'References': `<${connectionId}@updates.mayasundar.com>`,
-                    'In-Reply-To': `<${connectionId}@updates.mayasundar.com>`
-                }
+                    'Message-ID': `<${connectionId}@connections.columbiaintech.com>`,
+                    'References': `<${connectionId}@connections.columbiaintech.com>`,
+                    'In-Reply-To': `<${connectionId}@connections.columbiaintech.com>`
+                },
+                replyTo: 'maya@columbiaintech.com'
             });
-            const senderEmail = 'team@updates.mayasundar.com'
+            const senderEmail = 'team@connections.columbiaintech.com'
             await createConnectionThread(connectionId, senderEmail, subject, html)
             emailsSent++;
         } catch (err) {
