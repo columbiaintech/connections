@@ -871,7 +871,34 @@ export async function acceptGroupInvitation(groupId: string, role: GroupRole): P
     }
 }
 
-export async function fetchConnectionThread(connectionId: string) {
+export async function createConnectionThread(connectionId: string, senderEmail: string, subject: string, body: string) {
+    const supabase = await createClient();
+
+    try {
+        const threadId = uuidv4();
+        const { data, error } = await supabase
+            .from('connection_threads')
+            .insert({
+                connection_id: connectionId,
+                sender_email: senderEmail,
+                subject,
+                body,
+                thread_id: threadId,
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        await updateConnectionStatus(connectionId, 'pending' as ConnectionStatus)
+        if (error) throw error;
+        return data;
+    } catch (error) {
+        console.error('Error creating connection thread:', error);
+        throw error;
+    }
+}
+
+export async function fetchConnectionThread(connectionId: string): Promise<ConnectionThread[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('connection_threads')
@@ -880,5 +907,114 @@ export async function fetchConnectionThread(connectionId: string) {
         .order('created_at', { ascending: true });
 
     if (error) throw error;
-    return data;
+    return data||[];
 }
+
+export async function updateConnectionStatus(connectionId: string, status: ConnectionStatus): Promise<{ success:boolean;message:string  }> {
+    const supabase = await createClient();
+    try {
+        const { error } = await supabase
+            .from('connections')
+            .update({ status })
+            .eq('connection_id', connectionId);
+
+        if (error) throw error;
+
+        return {
+            success: true,
+            message: 'Connection status updated successfully'
+        };
+    } catch (error) {
+        console.error('Error updating connection status:', error);
+        return {
+            success: false,
+            message: 'Failed to update connection status'
+        };
+    }
+}
+
+export async function getConnectionDetails(connectionIds: string[]){
+    const supabase = await createClient();
+    try {
+        const { data, error } = await supabase
+            .from('connections')
+            .select('*')
+            .in('connection_id', connectionIds);
+
+        if (error) throw error;
+
+        return data || [];
+    } catch (error) {
+        console.error('Error fetching connection details:', error);
+        return [];
+    }
+}
+
+
+export async function getConnectionDetailsForEmail(connectionId: string): Promise<{
+    event: Pick<Event, 'event_name' | 'event_date'> | null;
+    group: Group | null;
+    user1: Member | null;
+    user2: Member | null;
+}> {
+    const supabase = await createClient();
+
+    try {
+        // connection data
+        const { data: connection, error: connError } = await supabase
+            .from('connections')
+            .select('event_id, group_id, user1_id, user2_id')
+            .eq('connection_id', connectionId)
+            .single();
+
+        if (connError) throw connError;
+        if (!connection) throw new Error('Connection not found');
+        console.log('Fetched connection:', connection);
+
+        const { event_id, group_id, user1_id, user2_id } = connection;
+
+        // event data using connection.event_id
+        const { data: event, error: eventError } = await supabase
+            .from('events')
+            .select('event_name, event_date')
+            .eq('event_id', event_id)
+            .single();
+
+        if (eventError) throw eventError;
+
+        // group data using connections.group_id
+        const { data: group, error: groupError } = await supabase
+            .from('groups')
+            .select('*')
+            .eq('group_id', group_id)
+            .single();
+
+        if (groupError) throw groupError;
+
+        if (!user1_id || !user2_id) {
+            throw new Error(`user1_id or user2_id is null for connection ${connectionId}`);
+        }
+
+        // member data using connections.user1_id and connections.user2_id
+        const { data: members, error: memberError } = await supabase
+            .from('members')
+            .select('*')
+            .in('user_id', [user1_id, user2_id]);
+
+        if (memberError) throw memberError;
+        const updatedMembers = (members ?? []) as Member[];
+        const user1 = updatedMembers?.find((m) => m.user_id === user1_id) || null;
+        const user2 = updatedMembers?.find((m) => m.user_id === user2_id) || null;
+
+        return {
+            event: event || null,
+            user1,
+            user2,
+            group: group || null
+        };
+    } catch (error) {
+        console.error('Error fetching connection details for email:', error);
+        throw error;
+    }
+}
+
