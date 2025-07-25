@@ -712,36 +712,85 @@ export async function createGroupWithInvites(groupName: string, invites: GroupIn
             throw new Error('User not authenticated');
         }
         const groupId = uuidv4();
-        const { data: groupData, error: groupError } = await supabase
+        const groupData: GroupInsert = {
+            group_id: groupId,
+            group_name: groupName,
+            description: null,
+            created_at: new Date().toISOString(),
+        };
+
+        const { data: insertedGroup, error: groupError } = await supabase
             .from('groups')
-            .insert({
-                group_id:groupId,
-                group_name: groupName,
-                created_at: new Date().toISOString(),
-            })
+            .insert(groupData)
             .select()
             .single();
 
         if (groupError) throw groupError;
 
+        const { data: existingMember, error: memberCheckError } = await supabase
+            .from('members')
+            .select('user_id, email')
+            .eq('email', user.email)
+            .eq('group_id', groupId)
+            .maybeSingle();
 
-        await supabase.from('members').upsert({
+        if (memberCheckError) throw memberCheckError;
+
+        let memberUserId = user.id;
+
+        if (!existingMember) {
+            const { data: memberInGroup, error: groupMemberError } = await supabase
+                .from('members')
+                .select('user_id')
+                .eq('user_id', memberUserId)
+                .eq('group_id', groupId)
+                .maybeSingle();
+
+            if (groupMemberError) throw groupMemberError;
+            if (!memberInGroup) {
+                const memberData: MemberInsert = {
+                    user_id: memberUserId,
+                    email: user.email || '',
+                    name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+                    group_id: groupId,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                const { error: insertMemberError } = await supabase
+                    .from('members')
+                    .insert(memberData);
+
+                if (insertMemberError) throw insertMemberError;
+
+            }
+        }
+        else {
+            const memberData: MemberInsert = {
+                user_id: user.id,
+                email: user.email || '',
+                name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+                group_id: groupId,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            const {error: insertMemberError} = await supabase
+                .from('members')
+                .insert(memberData);
+
+            if (insertMemberError) throw insertMemberError;
+        }
+
+            const ownerGroupData: UserGroupInsert = {
             user_id: user.id,
-            email: user.email,
-            name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
             group_id: groupId,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        });
+            role: 'owner' as GroupRole,
+            created_at: new Date().toISOString()
+        };
 
         const { error: ownerError } = await supabase
             .from('user_groups')
-            .insert({
-                user_id: user.id,
-                group_id: groupId,
-                role: 'owner',
-                created_at: new Date().toISOString()
-            });
+            .insert(ownerGroupData);
 
         if (ownerError) throw ownerError;
 
@@ -756,9 +805,8 @@ export async function createGroupWithInvites(groupName: string, invites: GroupIn
         }
 
         return {
-            group: groupData,
-            groupId: groupId,
-            message: 'Successfully created group and added members.'
+            groupId,
+            group: insertedGroup,
         };
     } catch (error) {
         console.error('Error creating group with invites:', error);
