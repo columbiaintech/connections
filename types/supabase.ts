@@ -242,7 +242,6 @@ export type Database = {
                     created_at: string
                     email: string | null
                     first_name: string | null
-                    group_id: string | null
                     job_title: string | null
                     last_name: string | null
                     name: string | null
@@ -256,7 +255,6 @@ export type Database = {
                     created_at?: string
                     email?: string | null
                     first_name?: string | null
-                    group_id?: string | null
                     job_title?: string | null
                     last_name?: string | null
                     name?: string | null
@@ -270,7 +268,6 @@ export type Database = {
                     created_at?: string
                     email?: string | null
                     first_name?: string | null
-                    group_id?: string | null
                     job_title?: string | null
                     last_name?: string | null
                     name?: string | null
@@ -278,37 +275,29 @@ export type Database = {
                     updated_at?: string | null
                     user_id?: string
                 }
-                Relationships: [
-                    {
-                        foreignKeyName: "members_group_id_fkey"
-                        columns: ["group_id"]
-                        isOneToOne: false
-                        referencedRelation: "groups"
-                        referencedColumns: ["group_id"]
-                    },
-                ]
+                Relationships: []
             }
             user_groups: {
                 Row: {
                     created_at: string
-                    group_id: string | null
+                    group_id: string
                     id: number
                     role: Database["public"]["Enums"]["group_role"] | null
-                    user_id: string | null
+                    user_id: string
                 }
                 Insert: {
                     created_at?: string
-                    group_id?: string | null
+                    group_id: string
                     id?: number
                     role?: Database["public"]["Enums"]["group_role"] | null
-                    user_id?: string | null
+                    user_id: string
                 }
                 Update: {
                     created_at?: string
-                    group_id?: string | null
+                    group_id?: string
                     id?: number
                     role?: Database["public"]["Enums"]["group_role"] | null
-                    user_id?: string | null
+                    user_id?: string
                 }
                 Relationships: [
                     {
@@ -317,6 +306,13 @@ export type Database = {
                         isOneToOne: false
                         referencedRelation: "groups"
                         referencedColumns: ["group_id"]
+                    },
+                    {
+                        foreignKeyName: "user_groups_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "members"
+                        referencedColumns: ["user_id"]
                     },
                 ]
             }

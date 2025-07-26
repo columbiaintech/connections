@@ -99,10 +99,12 @@ interface AttendeeUpdateResult {
 export async function fetchColumns() {
     const supabase = await createClient()
     try {
+        console.log('right before gmc')
         const {data:userData, error:userError } = await supabase.rpc('get_member_columns');
         if (userError) {
             throw userError;
         }
+        console.log('Columns returned by get_member_columns:', userData);
 
         const { data:previewAttendee, error:previewError } = await supabase
             .from('event_attendees')
@@ -118,6 +120,7 @@ export async function fetchColumns() {
                 (col) => !['event_id', 'user_id', 'created_at'].includes(col)
             );
         } else {
+            console.log('right before gac')
             const { data: fallbackCols, error: fallbackError } = await supabase.rpc('get_event_attendee_columns');
             if (fallbackError) throw fallbackError;
 
@@ -158,9 +161,11 @@ async function createMembers(userData: MemberDataInput[], groupId: string | null
     if (!userData.length) return [];
     const supabase = await createClient();
     try {
+        console.log('right before gmc')
         const { data: memberColumns, error: columnsError } = await supabase
             .rpc('get_member_columns');
         if (columnsError) throw columnsError;
+        console.log('Columns returned by get_member_columns:', userData);
 
         const memberSet = new Set(memberColumns);
 
@@ -168,8 +173,7 @@ async function createMembers(userData: MemberDataInput[], groupId: string | null
             const memberPayload: MemberInsert = {
                 user_id: uuidv4(),
                 created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                ...(groupId && { group_id: groupId })
+                updated_at: new Date().toISOString()
             };
 
             for (const key in member) {
@@ -177,6 +181,7 @@ async function createMembers(userData: MemberDataInput[], groupId: string | null
                     (memberPayload as any)[key] = member[key];
                 }
             }
+            console.log("Inserting this into members:", memberPayload);
 
             return memberPayload;
         });
@@ -262,7 +267,6 @@ async function processMembers(memberData: MemberDataInput[], groupId: string | n
             user_id: existingMembers.get(member.email)!,
             email: member.email,
             name: member.name || `${member.first_name || ''} ${member.last_name || ''}`.trim(),
-            group_id: groupId,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         }));
@@ -661,12 +665,16 @@ export async function fetchUserGroupDetails(groupId: string): Promise<GroupDetai
 
         if (connectionsError) throw connectionsError;
 
-        const { data: members, error: membersError } = await supabase
-            .from('members')
-            .select('*')
+        const { data: userGroups, error: userGroupsError } = await supabase
+            .from('user_groups')
+            .select('user_id, members(*)')
             .eq('group_id', groupId);
 
-        if (membersError) throw membersError;
+        if (userGroupsError) throw userGroupsError;
+
+        const members = userGroups
+            ? userGroups.map((ug: any) => ug.members).filter(Boolean)
+            : [];
 
         let attendees: (EventAttendee & { members: Member })[] = [];
         if (eventIds.length > 0) {
@@ -679,21 +687,21 @@ export async function fetchUserGroupDetails(groupId: string): Promise<GroupDetai
             attendees = attendeesData || [];
         }
 
-        const uniqueMembersMap = new Map<string, Member>();
-        attendees.forEach(attendee => {
-            const member = attendee.members;
-            if (member?.email && !uniqueMembersMap.has(member.email)) {
-                uniqueMembersMap.set(member.email, member);
-            }
-        });
+        // const uniqueMembersMap = new Map<string, Member>();
+        // attendees.forEach(attendee => {
+        //     const member = attendee.members;
+        //     if (member?.email && !uniqueMembersMap.has(member.email)) {
+        //         uniqueMembersMap.set(member.email, member);
+        //     }
+        // });
 
-        const uniqueMembers = Array.from(uniqueMembersMap.values());
+        // const uniqueMembers = Array.from(uniqueMembersMap.values());
 
 
         return {
             group: groupData,
             events: events || [],
-            members: uniqueMembers,
+            members,
             attendees,
             connections: enriched_connections || []
         };
@@ -718,7 +726,7 @@ export async function createGroupWithInvites(groupName: string, invites: GroupIn
             description: null,
             created_at: new Date().toISOString(),
         };
-
+        console.log('✅ Inserting group');
         const { data: insertedGroup, error: groupError } = await supabase
             .from('groups')
             .insert(groupData)
@@ -726,12 +734,11 @@ export async function createGroupWithInvites(groupName: string, invites: GroupIn
             .single();
 
         if (groupError) throw groupError;
-
+        console.log('✅ Checking for existing member');
         const { data: existingMember, error: memberCheckError } = await supabase
             .from('members')
-            .select('user_id, email')
-            .eq('email', user.email)
-            .eq('group_id', groupId)
+            .select('*')
+            .eq('user_id', user.id)
             .maybeSingle();
 
         if (memberCheckError) throw memberCheckError;
@@ -739,45 +746,19 @@ export async function createGroupWithInvites(groupName: string, invites: GroupIn
         let memberUserId = user.id;
 
         if (!existingMember) {
-            const { data: memberInGroup, error: groupMemberError } = await supabase
-                .from('members')
-                .select('user_id')
-                .eq('user_id', memberUserId)
-                .eq('group_id', groupId)
-                .maybeSingle();
-
-            if (groupMemberError) throw groupMemberError;
-            if (!memberInGroup) {
-                const memberData: MemberInsert = {
-                    user_id: memberUserId,
-                    email: user.email || '',
-                    name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
-                    group_id: groupId,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                };
-                const { error: insertMemberError } = await supabase
-                    .from('members')
-                    .insert(memberData);
-
-                if (insertMemberError) throw insertMemberError;
-
-            }
-        }
-        else {
             const memberData: MemberInsert = {
-                user_id: user.id,
+                user_id: memberUserId,
                 email: user.email || '',
                 name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
-                group_id: groupId,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             };
 
-            const {error: insertMemberError} = await supabase
+            const { data: insertedMember, error: insertMemberError } = await supabase
                 .from('members')
-                .insert(memberData);
-
+                .insert(memberData)
+                .select()
+                .single();
             if (insertMemberError) throw insertMemberError;
         }
 
@@ -787,22 +768,20 @@ export async function createGroupWithInvites(groupName: string, invites: GroupIn
             role: 'owner' as GroupRole,
             created_at: new Date().toISOString()
         };
+        console.log('✅ Inserting owner into user_groups');
 
         const { error: ownerError } = await supabase
             .from('user_groups')
             .insert(ownerGroupData);
 
         if (ownerError) throw ownerError;
+        console.log('✅ Sending invites');
 
-        if (invites.length > 0) {
-            const validInvites = invites.filter(invite => invite.email.trim());
-
-            if (validInvites.length > 0) {
-                for (const invite of validInvites) {
-                    await sendGroupInvitation(invite.email, groupId, invite.role, groupName);
-                }
-            }
-        }
+        // const validInvites = invites.filter(invite => invite.email.trim());
+        // for (const invite of validInvites) {
+        //     await sendGroupInvitation(invite.email, groupId, invite.role, groupName);
+        // }
+        // console.log('✅ sent invites');
 
         return {
             groupId,
@@ -819,9 +798,9 @@ export async function sendGroupInvitation(email: string, groupId: string, role: 
 
     const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
         data: {
-            group_id: groupId,
-            role: role,
-            group_name: groupName
+            invited_group_id: groupId,
+            invited_role: role,
+            invited_group_name: groupName
         },
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/accept-invitation?group=${groupId}&role=${role}`
     });
@@ -836,6 +815,30 @@ export async function acceptGroupInvitation(groupId: string, role: GroupRole): P
         const {data: {user}, error: userError} = await supabase.auth.getUser();
         if (userError || !user) throw new Error('User not authenticated');
 
+        const {data: existingMember, error: memberCheckError} = await supabase
+            .from('members')
+            .select('user_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        if (memberCheckError) throw memberCheckError;
+
+        if(!existingMember){
+            const memberData: MemberInsert = {
+                user_id: user.id,
+                email: user.email || '',
+                name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            const { error: memberInsertError } = await supabase
+                .from('members')
+                .insert(memberData);
+
+            if (memberInsertError) throw memberInsertError;
+        }
+
         const userGroupData: UserGroupInsert = {
             user_id: user.id,
             group_id: groupId,
@@ -843,26 +846,34 @@ export async function acceptGroupInvitation(groupId: string, role: GroupRole): P
             created_at: new Date().toISOString()
         };
 
-        const { error: userGroupError } = await supabase
+        const {data: userGroup, error: userGroupError } = await supabase
             .from('user_groups')
-            .insert(userGroupData);
-
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('group_id', groupId)
+            .maybeSingle();
         if (userGroupError) throw userGroupError;
 
-        const memberData: MemberInsert = {
-            user_id: user.id,
-            group_id: groupId,
-            email: user.email || '',
-            name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
+        if (!userGroup) {
+            const { error: insertUserGroupError } = await supabase
+                .from('user_groups')
+                .insert(userGroupData);
+            if (insertUserGroupError) throw insertUserGroupError;
+        }
 
-        const { error: memberError } = await supabase
-            .from('members')
-            .insert(memberData);
-
-        if (memberError) throw memberError;
+        // const memberData: MemberInsert = {
+        //     user_id: user.id,
+        //     email: user.email || '',
+        //     name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+        //     created_at: new Date().toISOString(),
+        //     updated_at: new Date().toISOString()
+        // };
+        //
+        // const { error: memberError } = await supabase
+        //     .from('members')
+        //     .insert(memberData);
+        //
+        // if (memberError) throw memberError;
 
         return { success: true };
     } catch (error) {
