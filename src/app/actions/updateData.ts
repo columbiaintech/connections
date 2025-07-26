@@ -2,6 +2,7 @@
 import {createClient} from '@/utils/supabase/server'
 import { v4 as uuidv4 } from 'uuid';
 import { Tables, TablesInsert, TablesUpdate, Enums } from '@/types/supabase';
+import {sendGroupInvitation} from "@/app/actions/admin";
 
 // TODO: initialize supabase client, create functions to update event, users, connections data
 
@@ -777,11 +778,11 @@ export async function createGroupWithInvites(groupName: string, invites: GroupIn
         if (ownerError) throw ownerError;
         console.log('✅ Sending invites');
 
-        // const validInvites = invites.filter(invite => invite.email.trim());
-        // for (const invite of validInvites) {
-        //     await sendGroupInvitation(invite.email, groupId, invite.role, groupName);
-        // }
-        // console.log('✅ sent invites');
+        const validInvites = invites.filter(invite => invite.email.trim());
+        for (const invite of validInvites) {
+            await sendGroupInvitation(invite.email, groupId, invite.role, groupName);
+        }
+        console.log('✅ sent invites');
 
         return {
             groupId,
@@ -792,96 +793,6 @@ export async function createGroupWithInvites(groupName: string, invites: GroupIn
         throw error;
     }
 }
-
-export async function sendGroupInvitation(email: string, groupId: string, role: GroupRole, groupName: string): Promise<void> {
-    const supabase = await createClient();
-
-    const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
-        data: {
-            invited_group_id: groupId,
-            invited_role: role,
-            invited_group_name: groupName
-        },
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/accept-invitation?group=${groupId}&role=${role}`
-    });
-
-    if (error) throw error;
-}
-
-export async function acceptGroupInvitation(groupId: string, role: GroupRole): Promise<{ success: boolean }>  {
-    const supabase = await createClient();
-
-    try {
-        const {data: {user}, error: userError} = await supabase.auth.getUser();
-        if (userError || !user) throw new Error('User not authenticated');
-
-        const {data: existingMember, error: memberCheckError} = await supabase
-            .from('members')
-            .select('user_id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-        if (memberCheckError) throw memberCheckError;
-
-        if(!existingMember){
-            const memberData: MemberInsert = {
-                user_id: user.id,
-                email: user.email || '',
-                name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-
-            const { error: memberInsertError } = await supabase
-                .from('members')
-                .insert(memberData);
-
-            if (memberInsertError) throw memberInsertError;
-        }
-
-        const userGroupData: UserGroupInsert = {
-            user_id: user.id,
-            group_id: groupId,
-            role: role,
-            created_at: new Date().toISOString()
-        };
-
-        const {data: userGroup, error: userGroupError } = await supabase
-            .from('user_groups')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('group_id', groupId)
-            .maybeSingle();
-        if (userGroupError) throw userGroupError;
-
-        if (!userGroup) {
-            const { error: insertUserGroupError } = await supabase
-                .from('user_groups')
-                .insert(userGroupData);
-            if (insertUserGroupError) throw insertUserGroupError;
-        }
-
-        // const memberData: MemberInsert = {
-        //     user_id: user.id,
-        //     email: user.email || '',
-        //     name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
-        //     created_at: new Date().toISOString(),
-        //     updated_at: new Date().toISOString()
-        // };
-        //
-        // const { error: memberError } = await supabase
-        //     .from('members')
-        //     .insert(memberData);
-        //
-        // if (memberError) throw memberError;
-
-        return { success: true };
-    } catch (error) {
-        console.error('Error accepting invitation:', error);
-        throw error;
-    }
-}
-
 export async function createConnectionThread(connectionId: string, senderEmail: string, subject: string, body: string) {
     const supabase = await createClient();
 
