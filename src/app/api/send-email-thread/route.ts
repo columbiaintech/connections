@@ -1,8 +1,6 @@
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import {createConnectionThread, getConnectionDetailsForEmail} from "@/app/actions/updateData";
-import * as fs from "fs";
-import path from "path";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
@@ -55,7 +53,7 @@ export async function POST(req: Request) {
 
         <p>Hi ${user1.first_name} & ${user2.first_name},</p>
         <p>We're excited to introduce you both through this thread ahead of our ${event.event_name}.</p>        
-        <p>Feel free to reply-all and connect directly. If you haven't met before, we hope nametags will make it easy for you to find each other at the event!</p>
+        <p>If you haven't met before, we hope nametags will make it easy for you to find each other at the event!</p>
         <p>Thank you so much for participating in our little pilot - this is the first time we've done this! We'll follow up to get your thoughts afterwards.</p>
         <p>– Maya, on behalf of the ${group.group_name} Team</p>
     `;
