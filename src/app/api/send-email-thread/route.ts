@@ -1,6 +1,8 @@
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import {createConnectionThread, getConnectionDetailsForEmail} from "@/app/actions/updateData";
+import * as fs from "fs";
+import path from "path";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
@@ -33,13 +35,29 @@ export async function POST(req: Request) {
                 continue;
             }
 
-            const dateStr = event.event_date ? new Date(event.event_date).toLocaleDateString() : '[date unavailable]';
-            const subject = `👋 Your ${group.group_name} Connection!`;
+            const dateStr = event?.event_date ?
+                new Date(event.event_date).toLocaleDateString('en-US', { timeZone: 'UTC' }) :
+                '[date unavailable]';
+            const subject = `👋 Your ${group.group_name} Connection on ${dateStr}!`;
             const html = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>👋 Your ${group.group_name} Connection on ${dateStr}!</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0 auto; padding: 20px;">
+        <div style="font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; ">
+            <div style="color: #46948D; font-size: 1.375rem; margin-top: 8px;">Your ${group.group_name} Connection on ${dateStr}!</div>
+            <p style="font-size: 1.125rem; color: #3C6783;"> ${user1.name} (${user1.school} ${user1.class_year}) 🤝 ${user2.name} (${user2.school} ${user2.class_year})</p>
+        </div>
+
         <p>Hi ${user1.first_name} & ${user2.first_name},</p>
-        <p>We're excited to introduce you both through this thread ahead of our <strong>${event.event_name}</strong> on <strong>${dateStr}</strong>.</p>
-        <p>Feel free to reply-all and connect directly.</p>
-        <p>– Your ${group.group_name} Team</p>
+        <p>We're excited to introduce you both through this thread ahead of our ${event.event_name}.</p>        
+        <p>Feel free to reply-all and connect directly. If you haven't met before, we hope nametags will make it easy for you to find each other at the event!</p>
+        <p>Thank you so much for participating in our little pilot - this is the first time we've done this! We'll follow up to get your thoughts afterwards.</p>
+        <p>– Maya, on behalf of the ${group.group_name} Team</p>
     `;
 
             await resend.emails.send({
@@ -47,13 +65,13 @@ export async function POST(req: Request) {
                 to: [user1.email, user2.email],
                 subject,
                 html,
-
                 headers: {
                     'Message-ID': `<${connectionId}@connections.columbiaintech.com>`,
                     'References': `<${connectionId}@connections.columbiaintech.com>`,
                     'In-Reply-To': `<${connectionId}@connections.columbiaintech.com>`
                 },
-                replyTo: 'maya@columbiaintech.com'
+                replyTo: ['maya@columbiaintech.com'],
+                cc: ['maya@columbiaintech.com'],
             });
             const senderEmail = 'team@connections.columbiaintech.com'
             await createConnectionThread(connectionId, senderEmail, subject, html)
